@@ -8,7 +8,6 @@ import (
 
 	"github.com/ignisrex/tix/core/cmd/api"
 	"github.com/ignisrex/tix/core/internal/config"
-	"github.com/ignisrex/tix/core/internal/database"
 )
 
 func main() {
@@ -34,9 +33,7 @@ func main() {
 		log.Fatal("Error pinging database -> ", err)
 	}
 
-	queries := database.New(conn)
-
-	server := api.NewAPIServer(":"+port, conn,queries)
+	server := api.NewAPIServer(":"+port, conn)
 	err = server.Run()
 	if err != nil {
 		log.Fatal("Error starting API server -> ", err)

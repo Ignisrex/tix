@@ -19,11 +19,12 @@ type APIServer struct {
 	q    *database.Queries
 }
 
-func NewAPIServer(addr string, sqlDB *sql.DB, q *database.Queries) *APIServer {
+func NewAPIServer(addr string, sqlDB *sql.DB) *APIServer {
+	queries := database.New(sqlDB)
 	return &APIServer{
 		addr:  addr,
 		sqlDB: sqlDB,
-		q:    q,
+		q:    queries,
 	}
 }
 

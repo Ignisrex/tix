@@ -26,6 +26,27 @@ services:
       - internal_net
 
   # ======================
+  # Booking service (internal only)
+  # ======================
+  booking:
+    build:
+      context: ./booking
+      dockerfile: Dockerfile
+    container_name: booking
+    environment:
+      - PORT=8081
+      # Database connection variables (same DB as core)
+      - DB_USER=postgres
+      - DB_PASSWORD=password
+      - DB_HOST=db
+      - DB_PORT=5432
+      - DB_NAME=tix_db
+    depends_on:
+      - db
+    networks:
+      - internal_net
+
+  # ======================
   # Postgres DB
   # ======================
   db:
