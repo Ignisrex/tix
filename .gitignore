@@ -1,0 +1,20 @@
+# Environment variables
+.env
+.env.local
+
+# Go build artifacts
+*.exe
+*.test
+*.out
+
+# IDE files
+.vscode/
+.idea/
+.DS_Store
+
+# OS files
+Thumbs.db
+
+# Docker
+docker-compose.override.yml
+

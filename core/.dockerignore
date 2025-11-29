@@ -1,0 +1,28 @@
+# Git
+.git
+.gitignore
+
+# Environment files
+.env
+.env.local
+
+# IDE files
+.vscode
+.idea
+.DS_Store
+
+# Build artifacts
+*.exe
+*.test
+*.out
+
+# Test files
+*_test.go
+
+# Makefile (not needed in container)
+Makefile
+
+# Docker files
+Dockerfile
+.dockerignore
+

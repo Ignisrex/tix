@@ -1,0 +1,73 @@
+version: "3.9"
+
+services:
+  # ======================
+  # API gateway / core Go service
+  # ======================
+  core:
+    build:
+      context: ./core
+      dockerfile: Dockerfile
+    container_name: core
+    ports:
+      - "8080:8080" # exposed to host (API gateway)
+    environment:
+      - PORT=8080
+      # Database connection variables
+      - DB_USER=postgres
+      - DB_PASSWORD=password
+      - DB_HOST=db
+      - DB_PORT=5432
+      - DB_NAME=tix_db
+    depends_on:
+      - db
+    networks:
+      - public_net
+      - internal_net
+
+  # ======================
+  # Postgres DB
+  # ======================
+  db:
+    image: postgres:16
+    container_name: db
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_DB=tix_db
+    ports:
+      # Optional: expose DB to host (handy for local dev / connecting via GUI)
+      - "5532:5432"
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    networks:
+      - internal_net
+
+  # ======================
+  # Goose migration runner
+  # (uses db/Dockerfile we wrote earlier)
+  # ======================
+  migrate:
+    build:
+      context: ./db
+      dockerfile: Dockerfile
+    container_name: migrate
+    depends_on:
+      - db
+    environment:
+      - GOOSE_DRIVER=postgres
+      - GOOSE_DBSTRING=postgres://postgres:password@db:5432/tix_db?sslmode=disable
+    networks:
+      - internal_net
+    # By default the ENTRYPOINT in db/Dockerfile runs `goose ... up`
+    # so you can just `docker compose run --rm migrate`
+
+# ======================
+# Networks & volumes
+# ======================
+networks:
+  public_net: {}
+  internal_net: {}
+
+volumes:
+  db_data: {}
