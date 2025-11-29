@@ -3,6 +3,7 @@ package events
 import (
 	"fmt"
 	"net/http"
+	"database/sql"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
@@ -10,17 +11,24 @@ import (
 	"github.com/ignisrex/tix/core/internal/database"
 	"github.com/ignisrex/tix/core/internal/utils"
 	"github.com/ignisrex/tix/core/types"
+	"github.com/ignisrex/tix/core/service/tickets"
 )
 
 type Handler struct {
-	service *Service
+	eventService *Service
+	ticketService *tickets.Service
 }
 
-func NewHandler(queries *database.Queries) *Handler {
-	repo := NewRepo(queries)
-	service := NewService(repo)
+func NewHandler(queries *database.Queries, db *sql.DB) *Handler {
+	ticketRepo := tickets.NewRepo(queries)
+	ticketService := tickets.NewService(ticketRepo)
+
+	eventRepo := NewRepo(queries, db)
+	eventService := NewService(eventRepo, ticketService)
+	
 	return &Handler{
-		service: service,
+		eventService: eventService,
+		ticketService: ticketService,
 	}
 }
 
@@ -28,14 +36,18 @@ func (h *Handler) RegisterRoutes(r chi.Router) {
 	r.Route("/events", func(r chi.Router) {
 		r.Get("/", h.GetEvents)
 		r.Post("/", h.CreateEvent)
-		r.Get("/{id}", h.GetEvent)
-		r.Put("/{id}", h.UpdateEvent)
-		r.Delete("/{id}", h.DeleteEvent)
+		r.Get("/{event_id}", h.GetEvent)
+		r.Put("/{event_id}", h.UpdateEvent)
+		r.Delete("/{event_id}", h.DeleteEvent)
+
+		r.Route("/{event_id}/tickets", func(r chi.Router) {
+			r.Get("/", h.GetTickets)
+		})
 	})
 }
 
 func (h *Handler) GetEvents(w http.ResponseWriter, r *http.Request) {
-	events, err := h.service.GetEvents(r.Context())
+	events, err := h.eventService.GetEvents(r.Context())
 	if err != nil {
 		utils.WriteError(w, http.StatusInternalServerError, fmt.Errorf("failed to get events: %w", err))
 		return
@@ -50,7 +62,7 @@ func (h *Handler) CreateEvent(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	event, err := h.service.CreateEvent(r.Context(), createEventRequest)
+	event, err := h.eventService.CreateEvent(r.Context(), createEventRequest)
 	if err != nil {
 		utils.WriteError(w, http.StatusInternalServerError, fmt.Errorf("failed to create event: %w", err))
 		return
@@ -59,8 +71,8 @@ func (h *Handler) CreateEvent(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) GetEvent(w http.ResponseWriter, r *http.Request) {
-	id := chi.URLParam(r, "id")
-	event, err := h.service.GetEvent(r.Context(), uuid.MustParse(id))
+	id := chi.URLParam(r, "event_id")
+	event, err := h.eventService.GetEvent(r.Context(), uuid.MustParse(id))
 	if err != nil {
 		utils.WriteError(w, http.StatusInternalServerError, fmt.Errorf("failed to get event: %w", err))
 		return
@@ -69,13 +81,13 @@ func (h *Handler) GetEvent(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) UpdateEvent(w http.ResponseWriter, r *http.Request) {
-	id := chi.URLParam(r, "id")
+	id := chi.URLParam(r, "event_id")
 	var updateEventRequest types.UpdateEventRequest
 	if err := utils.ParseJSON(r, &updateEventRequest); err != nil {
 		utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("failed to parse update event request body: %w", err))
 		return
 	}
-	event, err := h.service.UpdateEvent(r.Context(), uuid.MustParse(id), updateEventRequest)
+	event, err := h.eventService.UpdateEvent(r.Context(), uuid.MustParse(id), updateEventRequest)
 	if err != nil {
 		utils.WriteError(w, http.StatusInternalServerError, fmt.Errorf("failed to update event: %w", err))
 		return
@@ -84,11 +96,21 @@ func (h *Handler) UpdateEvent(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) DeleteEvent(w http.ResponseWriter, r *http.Request) {
-	id := chi.URLParam(r, "id")
-	err := h.service.DeleteEvent(r.Context(), uuid.MustParse(id))
+	id := chi.URLParam(r, "event_id")
+	err := h.eventService.DeleteEvent(r.Context(), uuid.MustParse(id))
 	if err != nil {
 		utils.WriteError(w, http.StatusInternalServerError, fmt.Errorf("failed to delete event: %w", err))
 		return
 	}
 	utils.WriteJSON(w, http.StatusOK, fmt.Sprintf("event deleted successfully with id: %v", id))
+}
+
+func (h *Handler) GetTickets(w http.ResponseWriter, r *http.Request) {
+	eventID := chi.URLParam(r, "event_id")
+	tickets, err := h.ticketService.GetTicketsForEvent(r.Context(), uuid.MustParse(eventID))
+	if err != nil {
+		utils.WriteError(w, http.StatusInternalServerError, fmt.Errorf("failed to get tickets for event: %w", err))
+		return
+	}
+	utils.WriteJSON(w, http.StatusOK, tickets)
 }

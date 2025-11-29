@@ -7,32 +7,25 @@ package database
 
 import (
 	"context"
-	"encoding/json"
 
 	"github.com/google/uuid"
 )
 
 const createVenue = `-- name: CreateVenue :one
-INSERT INTO venues (name, location, seat_map)
-VALUES ($1, $2, $3)
-RETURNING id, name, location, seat_map
+INSERT INTO venues (name, location)
+VALUES ($1, $2)
+RETURNING id, name, location
 `
 
 type CreateVenueParams struct {
 	Name     string
 	Location string
-	SeatMap  json.RawMessage
 }
 
 func (q *Queries) CreateVenue(ctx context.Context, arg CreateVenueParams) (Venue, error) {
-	row := q.db.QueryRowContext(ctx, createVenue, arg.Name, arg.Location, arg.SeatMap)
+	row := q.db.QueryRowContext(ctx, createVenue, arg.Name, arg.Location)
 	var i Venue
-	err := row.Scan(
-		&i.ID,
-		&i.Name,
-		&i.Location,
-		&i.SeatMap,
-	)
+	err := row.Scan(&i.ID, &i.Name, &i.Location)
 	return i, err
 }
 
@@ -47,24 +40,19 @@ func (q *Queries) DeleteVenue(ctx context.Context, id uuid.UUID) error {
 }
 
 const getVenue = `-- name: GetVenue :one
-SELECT id, name, location, seat_map FROM venues
+SELECT id, name, location FROM venues
 WHERE id = $1
 `
 
 func (q *Queries) GetVenue(ctx context.Context, id uuid.UUID) (Venue, error) {
 	row := q.db.QueryRowContext(ctx, getVenue, id)
 	var i Venue
-	err := row.Scan(
-		&i.ID,
-		&i.Name,
-		&i.Location,
-		&i.SeatMap,
-	)
+	err := row.Scan(&i.ID, &i.Name, &i.Location)
 	return i, err
 }
 
 const getVenues = `-- name: GetVenues :many
-SELECT id, name, location, seat_map FROM venues
+SELECT id, name, location FROM venues
 ORDER BY name ASC
 LIMIT $1
 OFFSET $2
@@ -84,12 +72,7 @@ func (q *Queries) GetVenues(ctx context.Context, arg GetVenuesParams) ([]Venue, 
 	var items []Venue
 	for rows.Next() {
 		var i Venue
-		if err := rows.Scan(
-			&i.ID,
-			&i.Name,
-			&i.Location,
-			&i.SeatMap,
-		); err != nil {
+		if err := rows.Scan(&i.ID, &i.Name, &i.Location); err != nil {
 			return nil, err
 		}
 		items = append(items, i)
@@ -106,32 +89,20 @@ func (q *Queries) GetVenues(ctx context.Context, arg GetVenuesParams) ([]Venue, 
 const updateVenue = `-- name: UpdateVenue :one
 UPDATE venues
 SET name = $2,
-    location = $3,
-    seat_map = $4
+    location = $3
 WHERE id = $1
-RETURNING id, name, location, seat_map
+RETURNING id, name, location
 `
 
 type UpdateVenueParams struct {
 	ID       uuid.UUID
 	Name     string
 	Location string
-	SeatMap  json.RawMessage
 }
 
 func (q *Queries) UpdateVenue(ctx context.Context, arg UpdateVenueParams) (Venue, error) {
-	row := q.db.QueryRowContext(ctx, updateVenue,
-		arg.ID,
-		arg.Name,
-		arg.Location,
-		arg.SeatMap,
-	)
+	row := q.db.QueryRowContext(ctx, updateVenue, arg.ID, arg.Name, arg.Location)
 	var i Venue
-	err := row.Scan(
-		&i.ID,
-		&i.Name,
-		&i.Location,
-		&i.SeatMap,
-	)
+	err := row.Scan(&i.ID, &i.Name, &i.Location)
 	return i, err
 }

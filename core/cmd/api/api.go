@@ -17,6 +17,10 @@ type APIServer struct {
 	addr  string
 	sqlDB *sql.DB
 	q    *database.Queries
+
+	eventHandler *events.Handler
+	venueHandler *venues.Handler
+	
 }
 
 func NewAPIServer(addr string, sqlDB *sql.DB) *APIServer {
@@ -50,7 +54,7 @@ func (s *APIServer) Run() error {
 	v1 := chi.NewRouter()
 	v1.Get("/healthz", nil)
 
-	eventHandler := events.NewHandler(s.q)
+	eventHandler := events.NewHandler(s.q, s.sqlDB)
 	eventHandler.RegisterRoutes(v1)
 
 	venueHandler := venues.NewHandler(s.q)

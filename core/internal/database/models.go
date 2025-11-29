@@ -6,7 +6,6 @@ package database
 
 import (
 	"database/sql/driver"
-	"encoding/json"
 	"fmt"
 	"time"
 
@@ -71,21 +70,20 @@ type Ticket struct {
 	ID           uuid.UUID
 	EventID      uuid.UUID
 	TicketTypeID uuid.UUID
-	Seat         string
 	Status       types.TicketStatus
 	CreatedAt    time.Time
 	UpdatedAt    time.Time
 }
 
 type TicketType struct {
-	ID         uuid.UUID
-	Name       string
-	PriceCents int32
+	ID          uuid.UUID
+	Name        string
+	Description string
+	PriceCents  int32
 }
 
 type Venue struct {
 	ID       uuid.UUID
 	Name     string
 	Location string
-	SeatMap  json.RawMessage
 }

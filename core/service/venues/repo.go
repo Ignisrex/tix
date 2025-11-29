@@ -35,7 +35,6 @@ func (r *Repo) CreateVenue(ctx context.Context, venue types.CreateVenueRequest) 
 	dbVenue, err := r.queries.CreateVenue(ctx, database.CreateVenueParams{
 		Name:     venue.Name,
 		Location: venue.Location,
-		SeatMap:  venue.SeatMap,
 	})
 	if err != nil {
 		return types.Venue{}, err
@@ -56,7 +55,6 @@ func (r *Repo) UpdateVenue(ctx context.Context, id uuid.UUID, venue types.Update
 		ID:       id,
 		Name:     venue.Name,
 		Location: venue.Location,
-		SeatMap:  venue.SeatMap,
 	})
 	if err != nil {
 		return types.Venue{}, err

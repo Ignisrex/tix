@@ -2,6 +2,7 @@ package events
 
 import (
 	"context"
+	"database/sql"
 
 	"github.com/google/uuid"
 
@@ -12,11 +13,13 @@ import (
 
 type Repo struct {
 	queries *database.Queries
+	db *sql.DB
 }
 
-func NewRepo(queries *database.Queries) *Repo {
+func NewRepo(queries *database.Queries, db *sql.DB) *Repo {
 	return &Repo{
 		queries: queries,
+		db: db,
 	}
 }
 
@@ -31,8 +34,15 @@ func (r *Repo) GetEvents(ctx context.Context) ([]types.Event, error) {
 	return mappers.ToEvents(dbEvents), nil
 }
 
-func (r *Repo) CreateEvent(ctx context.Context, event types.CreateEventRequest) (types.Event, error) {
-	dbEvent, err := r.queries.CreateEvent(ctx, database.CreateEventParams{
+func (r *Repo) CreateEvent(ctx context.Context, event types.CreateEventRequest, tx *sql.Tx) (types.Event, error) {
+	var queries *database.Queries
+	if tx != nil {
+		queries = r.queries.WithTx(tx)
+	} else {
+		queries = r.queries
+	}
+
+	dbEvent, err := queries.CreateEvent(ctx, database.CreateEventParams{
 		Title: event.Title,
 		Description: event.Description,
 		StartDate: event.StartDate,

@@ -26,13 +26,11 @@ type Venue struct {
 	ID       uuid.UUID `json:"id"`
 	Name     string    `json:"name" validate:"required"`
 	Location string    `json:"location" validate:"required"`
-	SeatMap  json.RawMessage `json:"seat_map" validate:"required"`
 }
 
 type Ticket struct {
 	ID        uuid.UUID `json:"id"`
 	EventID   uuid.UUID `json:"event_id" validate:"required"`
-	Seat      string    `json:"seat" validate:"required"`
 	TicketTypeID uuid.UUID `json:"ticket_type_id" validate:"required"`
 	Status    TicketStatus `json:"status"`
 }
@@ -42,18 +40,18 @@ type CreateEventRequest struct {
 	Description string    `json:"description" validate:"required"`
 	StartDate   time.Time `json:"start_date" validate:"required"`
 	VenueID     uuid.UUID `json:"venue_id" validate:"required"`
+	TicketAllocation TicketAllocation `json:"ticket_allocation" validate:"required"`
 }
 
 type CreateVenueRequest struct {
 	Name     string    `json:"name" validate:"required"`
 	Location string    `json:"location" validate:"required"`
-	SeatMap  json.RawMessage `json:"seat_map" validate:"required"`
 }
 
-type CreateTicketRequest struct {
-	EventID   uuid.UUID `json:"event_id" validate:"required"`
-	Seat      string    `json:"seat" validate:"required"`
-	PriceCents int64     `json:"price_cents" validate:"required"` // Price in cents (USD)
+type TicketAllocation struct {
+	VIP int `json:"vip" validate:"required"`
+	GA int `json:"ga" validate:"required"`
+	FrontRow int `json:"front_row" validate:"required"`
 }
 
 type UpdateEventRequest struct {

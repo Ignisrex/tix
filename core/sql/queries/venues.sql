@@ -1,6 +1,6 @@
 -- name: CreateVenue :one
-INSERT INTO venues (name, location, seat_map)
-VALUES ($1, $2, $3)
+INSERT INTO venues (name, location)
+VALUES ($1, $2)
 RETURNING *;
 
 -- name: GetVenue :one
@@ -16,8 +16,7 @@ OFFSET $2;
 -- name: UpdateVenue :one
 UPDATE venues
 SET name = $2,
-    location = $3,
-    seat_map = $4
+    location = $3
 WHERE id = $1
 RETURNING *;
 

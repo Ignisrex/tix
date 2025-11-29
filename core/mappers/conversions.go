@@ -28,7 +28,6 @@ func ToVenue(dbVenue database.Venue) types.Venue {
 		ID: dbVenue.ID,
 		Name: dbVenue.Name,
 		Location: dbVenue.Location,
-		SeatMap: dbVenue.SeatMap,
 	}
 }
 
@@ -45,7 +44,6 @@ func ToTicket(dbTicket database.Ticket) types.Ticket {
 		ID: dbTicket.ID,
 		EventID: dbTicket.EventID,
 		TicketTypeID: dbTicket.TicketTypeID,
-		Seat: dbTicket.Seat,
 		Status: dbTicket.Status,
 	}
 }

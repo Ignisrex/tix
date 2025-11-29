@@ -2,8 +2,7 @@
 CREATE TABLE venues (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name VARCHAR(255) NOT NULL UNIQUE,
-    location VARCHAR(255) NOT NULL,
-    seat_map JSONB NOT NULL
+    location VARCHAR(255) NOT NULL
 );
 
 Create table events (
@@ -20,8 +19,14 @@ CREATE TABLE ticket_types (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     -- event_id UUID NOT NULL REFERENCES events(id), if we want to allow different ticket types for different events
     name VARCHAR(255) NOT NULL UNIQUE,
+    description TEXT NOT NULL,
     price_cents INTEGER NOT NULL
 );
+
+-- seed data for ticket_types
+INSERT INTO ticket_types (name, description, price_cents) VALUES ('vip', 'VIP ticket', 10000);
+INSERT INTO ticket_types (name, description, price_cents) VALUES ('ga', 'General Admission ticket', 1000);
+INSERT INTO ticket_types (name, description, price_cents) VALUES ('front_row', 'Front Row ticket', 5000);
 
 CREATE TYPE ticket_status AS ENUM ('available', 'booked', 'sold');
 
@@ -29,7 +34,6 @@ CREATE TABLE tickets (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     event_id UUID NOT NULL REFERENCES events(id),
     ticket_type_id UUID NOT NULL REFERENCES ticket_types(id),
-    seat VARCHAR(255) NOT NULL,
     status ticket_status NOT NULL DEFAULT 'available',
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
