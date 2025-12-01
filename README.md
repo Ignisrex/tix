@@ -142,7 +142,7 @@ The system consists of three main microservices:
 
 1. **Clone the repository**
    ```bash
-   git clone <repository-url>
+   git clone https://github.com/Ignisrex/tix.git
    cd tix
    ```
 
