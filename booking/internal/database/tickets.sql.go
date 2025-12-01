@@ -11,24 +11,57 @@ import (
 	"github.com/google/uuid"
 )
 
+const getTicketStatus = `-- name: GetTicketStatus :one
+SELECT status FROM tickets WHERE id = $1
+`
+
+func (q *Queries) GetTicketStatus(ctx context.Context, id uuid.UUID) (TicketStatus, error) {
+	row := q.db.QueryRowContext(ctx, getTicketStatus, id)
+	var status TicketStatus
+	err := row.Scan(&status)
+	return status, err
+}
+
+const getTicketWithPrice = `-- name: GetTicketWithPrice :one
+SELECT 
+    t.id,
+    t.event_id,
+    t.ticket_type_id,
+    t.status,
+    tt.price_cents
+FROM tickets t
+JOIN ticket_types tt ON t.ticket_type_id = tt.id
+WHERE t.id = $1
+`
+
+type GetTicketWithPriceRow struct {
+	ID           uuid.UUID
+	EventID      uuid.UUID
+	TicketTypeID uuid.UUID
+	Status       TicketStatus
+	PriceCents   int32
+}
+
+func (q *Queries) GetTicketWithPrice(ctx context.Context, id uuid.UUID) (GetTicketWithPriceRow, error) {
+	row := q.db.QueryRowContext(ctx, getTicketWithPrice, id)
+	var i GetTicketWithPriceRow
+	err := row.Scan(
+		&i.ID,
+		&i.EventID,
+		&i.TicketTypeID,
+		&i.Status,
+		&i.PriceCents,
+	)
+	return i, err
+}
+
 const purchaseTicket = `-- name: PurchaseTicket :exec
 UPDATE tickets
 SET status = 'sold'
-WHERE id = $1 AND status = 'booked'
+WHERE id = $1 AND status = 'available'
 `
 
 func (q *Queries) PurchaseTicket(ctx context.Context, id uuid.UUID) error {
 	_, err := q.db.ExecContext(ctx, purchaseTicket, id)
-	return err
-}
-
-const reserveTicket = `-- name: ReserveTicket :exec
-UPDATE tickets
-SET status = 'booked'
-WHERE id = $1 AND status = 'available'
-`
-
-func (q *Queries) ReserveTicket(ctx context.Context, id uuid.UUID) error {
-	_, err := q.db.ExecContext(ctx, reserveTicket, id)
 	return err
 }

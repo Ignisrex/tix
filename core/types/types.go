@@ -10,7 +10,6 @@ import (
 type TicketStatus string
 const (
 	TicketStatusAvailable TicketStatus = "available"
-	TicketStatusBooked    TicketStatus = "booked"
 	TicketStatusSold      TicketStatus = "sold"
 )
 

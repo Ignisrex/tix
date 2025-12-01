@@ -6,6 +6,7 @@ import (
 
 	"github.com/ignisrex/tix/booking/cmd/api"
 	"github.com/ignisrex/tix/booking/internal/config"
+	"github.com/ignisrex/tix/booking/internal/redis"
 	_ "github.com/lib/pq"
 )
 
@@ -22,7 +23,14 @@ func main() {
 		log.Fatal("failed to ping database: ", err)
 	}
 
-	server := api.NewAPIServer(addr, db)
+	redisAddr := config.Envs.RedisAddr()
+	redisClient, err := redis.NewClient(redisAddr)
+	if err != nil {
+		log.Fatal("failed to connect to Redis: ", err)
+	}
+	log.Printf("Successfully connected to Redis at %s", redisAddr)
+
+	server := api.NewAPIServer(addr, db, redisClient)
 	if err := server.Run(); err != nil {
 		log.Fatal("booking service failed: ", err)
 	}

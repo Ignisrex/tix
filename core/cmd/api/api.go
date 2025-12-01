@@ -8,9 +8,11 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
 
+	bookingclient "github.com/ignisrex/tix/core/internal/booking"
 	"github.com/ignisrex/tix/core/internal/database"
 	"github.com/ignisrex/tix/core/internal/elasticsearch"
 	"github.com/ignisrex/tix/core/internal/search"
+	"github.com/ignisrex/tix/core/service/booking"
 	"github.com/ignisrex/tix/core/service/events"
 	"github.com/ignisrex/tix/core/service/venues"
 )
@@ -21,9 +23,10 @@ type APIServer struct {
 	q    *database.Queries
 	esClient *elasticsearch.Client
 	searchClient *search.Client
+	bookingClient *bookingclient.Client
 }
 
-func NewAPIServer(addr string, sqlDB *sql.DB, esClient *elasticsearch.Client, searchClient *search.Client) *APIServer {
+func NewAPIServer(addr string, sqlDB *sql.DB, esClient *elasticsearch.Client, searchClient *search.Client, bookingClient *bookingclient.Client) *APIServer {
 	queries := database.New(sqlDB)
 	return &APIServer{
 		addr:  addr,
@@ -31,6 +34,7 @@ func NewAPIServer(addr string, sqlDB *sql.DB, esClient *elasticsearch.Client, se
 		q:    queries,
 		esClient: esClient,
 		searchClient: searchClient,
+		bookingClient: bookingClient,
 	}
 }
 
@@ -61,6 +65,9 @@ func (s *APIServer) Run() error {
 
 	venueHandler := venues.NewHandler(s.q)
 	venueHandler.RegisterRoutes(v1)
+
+	bookingHandler := booking.NewHandler(s.bookingClient)
+	bookingHandler.RegisterRoutes(v1)
 
 	router.Mount("/api/v1", v1)
 	return http.ListenAndServe(s.addr, router)

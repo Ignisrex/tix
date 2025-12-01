@@ -24,6 +24,7 @@ services:
       - ES_PORT=9200
 
       - SEARCH_SERVICE_URL=http://search:8082
+      - BOOKING_SERVICE_URL=http://booking:8081
     depends_on:
       db:
         condition: service_started
@@ -49,8 +50,12 @@ services:
       - DB_HOST=db
       - DB_PORT=5432
       - DB_NAME=tix_db
+
+      - REDIS_HOST=ticket-lock
+      - REDIS_PORT=6379
     depends_on:
       - db
+      - ticket-lock
     networks:
       - internal_net
 
@@ -141,6 +146,16 @@ services:
       retries: 10
       start_period: 30s
     # Services can access via http://elasticsearch:9200
+
+  # ======================
+  # Redis (for ticket reservation locking)
+  # ======================
+  ticket-lock:
+    image: redis:7-alpine
+    container_name: ticket-lock
+    networks:
+      - internal_net
+    # Services can access via ticket-lock:6379
 
 # ======================
 # Networks & volumes

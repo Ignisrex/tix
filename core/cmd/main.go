@@ -7,6 +7,7 @@ import (
 	_ "github.com/lib/pq"
 
 	"github.com/ignisrex/tix/core/cmd/api"
+	bookingclient "github.com/ignisrex/tix/core/internal/booking"
 	"github.com/ignisrex/tix/core/internal/config"
 	"github.com/ignisrex/tix/core/internal/elasticsearch"
 	"github.com/ignisrex/tix/core/internal/search"
@@ -50,7 +51,11 @@ func main() {
 	searchClient := search.NewClient(config.Envs.SearchServiceURL)
 	log.Printf("Search service client initialized with URL: %s", config.Envs.SearchServiceURL)
 
-	server := api.NewAPIServer(":"+port, conn, esClient, searchClient)
+	// Initialize booking service client
+	bookingClient := bookingclient.NewClient(config.Envs.BookingServiceURL)
+	log.Printf("Booking service client initialized with URL: %s", config.Envs.BookingServiceURL)
+
+	server := api.NewAPIServer(":"+port, conn, esClient, searchClient, bookingClient)
 	err = server.Run()
 	if err != nil {
 		log.Fatal("Error starting API server -> ", err)

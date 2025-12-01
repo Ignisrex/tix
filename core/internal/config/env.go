@@ -20,6 +20,7 @@ type Config struct {
 	ESPort string
 
 	SearchServiceURL string
+	BookingServiceURL string
 }
 
 var Envs Config = initConfig()
@@ -39,6 +40,7 @@ func initConfig() Config {
 		ESHost:     getEnv("ES_HOST", "localhost"),
 		ESPort:     getEnv("ES_PORT", "9200"),
 		SearchServiceURL: getEnv("SEARCH_SERVICE_URL", "http://search:8082"),
+		BookingServiceURL: getEnv("BOOKING_SERVICE_URL", "http://booking:8081"),
 	}
 }
 

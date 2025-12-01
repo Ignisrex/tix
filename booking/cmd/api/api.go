@@ -10,6 +10,7 @@ import (
 
 	"github.com/ignisrex/tix/booking/internal/config"
 	"github.com/ignisrex/tix/booking/internal/database"
+	"github.com/ignisrex/tix/booking/internal/redis"
 	"github.com/ignisrex/tix/booking/service/booking"
 )
 
@@ -17,14 +18,16 @@ type APIServer struct {
 	addr    string
 	db *sql.DB
 	queries *database.Queries
+	redisClient *redis.Client
 }
 
-func NewAPIServer(addr string, db *sql.DB) *APIServer {
+func NewAPIServer(addr string, db *sql.DB, redisClient *redis.Client) *APIServer {
 	queries := database.New(db)
 	return &APIServer{
 		addr:    addr,
 		db: db,
 		queries: queries,
+		redisClient: redisClient,
 	}
 }
 
@@ -46,9 +49,8 @@ func (s *APIServer) Run() error {
 		w.Write([]byte("booking service"))
 	})
 
-	// booking endpoints under /api/v1
 	v1 := chi.NewRouter()
-	bookingHandler := booking.NewHandler(s.queries)
+	bookingHandler := booking.NewHandler(s.queries, s.redisClient)
 	bookingHandler.RegisterRoutes(v1)
 	r.Mount("/api/v1", v1)
 

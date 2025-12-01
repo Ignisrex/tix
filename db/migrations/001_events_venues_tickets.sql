@@ -28,7 +28,7 @@ INSERT INTO ticket_types (name, description, price_cents) VALUES ('vip', 'VIP ti
 INSERT INTO ticket_types (name, description, price_cents) VALUES ('ga', 'General Admission ticket', 1000);
 INSERT INTO ticket_types (name, description, price_cents) VALUES ('front_row', 'Front Row ticket', 5000);
 
-CREATE TYPE ticket_status AS ENUM ('available', 'booked', 'sold');
+CREATE TYPE ticket_status AS ENUM ('available', 'sold');
 
 CREATE TABLE tickets (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
