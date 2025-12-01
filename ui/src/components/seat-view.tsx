@@ -6,7 +6,7 @@ import type { SeatViewProps, TicketTypeSection } from "./seat-view/types";
 import { TYPE_COLORS, SECTION_ORDER } from "./seat-view/constants";
 import { SectionSeats } from "./seat-view/section-seats";
 
-export function SeatView({ tickets, onSeatSelect }: SeatViewProps) {
+export function SeatView({ tickets, selectedTicketIds, onSeatSelect }: SeatViewProps) {
   // Group tickets by ticket_type_id
   const ticketsByType = useMemo(() => {
     const grouped = tickets.reduce((acc, ticket) => {
@@ -64,6 +64,7 @@ export function SeatView({ tickets, onSeatSelect }: SeatViewProps) {
         <SectionSeats
           key={section.typeId}
           section={section}
+          selectedTicketIds={selectedTicketIds}
           onSeatSelect={onSeatSelect}
         />
       ))}

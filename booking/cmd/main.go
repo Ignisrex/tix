@@ -33,7 +33,7 @@ func main() {
 	}
 
 	redisAddr := config.Envs.RedisAddr()
-	redisClient, err := redis.NewClient(redisAddr)
+	redisClient, err := redis.NewClient(redisAddr, config.Envs.ReservationTTLSeconds)
 	if err != nil {
 		log.Fatal("failed to connect to Redis: ", err)
 	}

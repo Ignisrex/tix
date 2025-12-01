@@ -6,15 +6,18 @@ import { Button } from "@/components/ui/button";
 import { Clock } from "lucide-react";
 import type { ReservationData } from "@/types/booking";
 
-const RESERVATION_TTL_SECONDS = 180; // 3 minutes
+const RESERVATION_TTL_SECONDS = parseInt(
+  process.env.NEXT_PUBLIC_RESERVATION_TTL_SECONDS || "180",
+  10
+);
 
 export function ReservationTimer() {
   const router = useRouter();
   const pathname = usePathname();
   const [remainingSeconds, setRemainingSeconds] = useState<number | null>(null);
-  const [ticketId, setTicketId] = useState<string | null>(null);
+  const [ticketIds, setTicketIds] = useState<string[]>([]);
   
-  const isOnCheckoutPage = pathname?.startsWith("/checkout/");
+  const isOnCheckoutPage = pathname?.startsWith("/checkout");
 
   useEffect(() => {
     // Check localStorage for active reservation
@@ -22,7 +25,7 @@ export function ReservationTimer() {
       const reservationStr = localStorage.getItem("tix_reservation");
       if (!reservationStr) {
         setRemainingSeconds(null);
-        setTicketId(null);
+        setTicketIds([]);
         return;
       }
 
@@ -36,17 +39,17 @@ export function ReservationTimer() {
           // Reservation expired
           localStorage.removeItem("tix_reservation");
           setRemainingSeconds(null);
-          setTicketId(null);
+          setTicketIds([]);
           return;
         }
 
         setRemainingSeconds(remaining);
-        setTicketId(reservation.ticketId);
+        setTicketIds(reservation.ticketIds || []);
       } catch (err) {
         console.error("Error parsing reservation data:", err);
         localStorage.removeItem("tix_reservation");
         setRemainingSeconds(null);
-        setTicketId(null);
+        setTicketIds([]);
       }
     };
 
@@ -62,13 +65,13 @@ export function ReservationTimer() {
   }, []);
 
   const handleGoToCheckout = () => {
-    if (ticketId && !isOnCheckoutPage) {
-      router.push(`/checkout/${ticketId}`);
+    if (ticketIds.length > 0 && !isOnCheckoutPage) {
+      router.push("/checkout");
     }
   };
 
   // Don't render if no active reservation
-  if (remainingSeconds === null || !ticketId) {
+  if (remainingSeconds === null || ticketIds.length === 0) {
     return null;
   }
 
@@ -81,7 +84,7 @@ export function ReservationTimer() {
   const isUrgent = remainingSeconds < 30;
 
   return (
-    <div className="fixed bottom-6 right-6 z-50 animate-in fade-in slide-in-from-bottom-4 duration-300">
+    <div className="fixed bottom-6 left-6 z-50 animate-in fade-in slide-in-from-bottom-4 duration-300">
       <div className="rounded-2xl bg-background/95 backdrop-blur-xl border border-border/50 shadow-xl shadow-black/5 p-5 min-w-[280px]">
         <div className="flex flex-col gap-4">
           {/* Header with icon */}
@@ -94,7 +97,7 @@ export function ReservationTimer() {
                 Reservation Active
               </p>
               <p className="text-sm text-muted-foreground mt-0.5">
-                Expires in <span className={`font-semibold ${isUrgent ? 'text-red-600 dark:text-red-400' : 'text-foreground'}`}>{timeString}</span>
+                {ticketIds.length} {ticketIds.length === 1 ? 'ticket' : 'tickets'} • Expires in <span className={`font-semibold ${isUrgent ? 'text-red-600 dark:text-red-400' : 'text-foreground'}`}>{timeString}</span>
               </p>
             </div>
           </div>

@@ -3,7 +3,7 @@
 import { useState, useRef } from "react";
 import type { SeatButtonProps } from "./types";
 
-export function SeatButton({ ticket, isAvailable, colorConfig, onClick }: SeatButtonProps) {
+export function SeatButton({ ticket, isAvailable, isSelected, colorConfig, onClick }: SeatButtonProps) {
   const [ripples, setRipples] = useState<Array<{ id: number; x: number; y: number }>>([]);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const rippleIdRef = useRef(0);
@@ -40,7 +40,9 @@ export function SeatButton({ ticket, isAvailable, colorConfig, onClick }: SeatBu
       className={`
         relative aspect-square rounded-md border-2 transition-all overflow-hidden
         ${isAvailable 
-          ? `${colorConfig.bgColor} ${colorConfig.borderColor} hover:scale-105 hover:shadow-md cursor-pointer` 
+          ? `${colorConfig.bgColor} ${colorConfig.borderColor} hover:scale-105 hover:shadow-md cursor-pointer ${
+              isSelected ? 'ring-2 ring-offset-2 ring-indigo-500 ring-offset-background' : ''
+            }` 
           : 'bg-gray-300 border-gray-400 opacity-50 cursor-not-allowed'
         }
         flex items-center justify-center text-xs font-medium

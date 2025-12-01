@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
-import { getEvent, getEventTickets, purchaseTicket } from "@/lib/api";
+import { useRouter } from "next/navigation";
+import { getEvent, getEventTickets, purchaseTickets } from "@/lib/api";
 import type { Event, Ticket } from "@/types/events";
 import type { ReservationData } from "@/types/booking";
 import { Button } from "@/components/ui/button";
@@ -12,22 +12,22 @@ import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { formatPrice } from "@/lib/utils";
 
-const RESERVATION_TTL_SECONDS = 180; // 3 minutes
+const RESERVATION_TTL_SECONDS = parseInt(
+  process.env.NEXT_PUBLIC_RESERVATION_TTL_SECONDS || "180",
+  10
+);
 
 export default function CheckoutPage() {
-  const params = useParams();
   const router = useRouter();
-  const ticketId = params.ticketId as string;
 
   const [event, setEvent] = useState<Event | null>(null);
-  const [ticket, setTicket] = useState<Ticket | null>(null);
+  const [tickets, setTickets] = useState<Ticket[]>([]);
   const [loading, setLoading] = useState(true);
   const [purchasing, setPurchasing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [reservationValid, setReservationValid] = useState<boolean | null>(null);
 
   useEffect(() => {
-    // Validate reservation and fetch data
     async function validateAndFetch() {
       const reservationStr = localStorage.getItem("tix_reservation");
       if (!reservationStr) {
@@ -38,7 +38,8 @@ export default function CheckoutPage() {
 
       try {
         const reservation: ReservationData = JSON.parse(reservationStr);
-        if (reservation.ticketId !== ticketId) {
+        
+        if (!reservation.ticketIds || reservation.ticketIds.length === 0) {
           setReservationValid(false);
           setLoading(false);
           return;
@@ -69,15 +70,20 @@ export default function CheckoutPage() {
 
           setEvent(eventData);
           
-          // Find the specific ticket
-          const foundTicket = ticketsData.find((t) => t.id === ticketId);
-          if (!foundTicket) {
-            setError("Ticket not found");
+          // Find all reserved tickets
+          // TODO: Store ticket data in a store and pass it to the checkout page instead of fetching it
+          //    -> introducing zustand for this would be a good idea
+          const foundTickets = ticketsData.filter((t) => 
+            reservation.ticketIds.includes(t.id)
+          );
+          
+          if (foundTickets.length !== reservation.ticketIds.length) {
+            setError("Some tickets were not found");
             setLoading(false);
             return;
           }
 
-          setTicket(foundTicket);
+          setTickets(foundTickets);
         } catch (err) {
           setError(err instanceof Error ? err.message : "Failed to load ticket details");
         } finally {
@@ -92,35 +98,50 @@ export default function CheckoutPage() {
     }
 
     validateAndFetch();
-  }, [ticketId]);
+  }, []);
 
   const handlePurchase = async () => {
-    if (!ticket) return;
+    if (tickets.length === 0) return;
+
+    const reservationStr = localStorage.getItem("tix_reservation");
+    if (!reservationStr) {
+      alert("Reservation not found");
+      return;
+    }
 
     try {
+      const reservation: ReservationData = JSON.parse(reservationStr);
+      const ticketIds = reservation.ticketIds;
+
       setPurchasing(true);
-      const response = await purchaseTicket(ticketId);
+      const response = await purchaseTickets(ticketIds);
       
-      if (response.success) {
+      if (response.success && response.purchase_id) {
         // Clear reservation
         localStorage.removeItem("tix_reservation");
         
-        if (event) {
-          router.push(`/success/${event.id}/${ticketId}`);
-        } else {
-          alert("Purchase successful but unable to redirect. Please go to home page.");
-        }
+        // Redirect to success page with purchase ID
+        router.push(`/purchases/${response.purchase_id}`);
       } else {
         alert(response.message || "Purchase failed");
+        // Redirect back to event page
+        if (event) {
+          router.push(`/events/${event.id}`);
+        }
       }
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : "Failed to purchase ticket";
+      const errorMessage = err instanceof Error ? err.message : "Failed to purchase tickets";
       alert(errorMessage);
+      // Redirect back to event page
+      if (event) {
+        router.push(`/events/${event.id}`);
+      }
     } finally {
       setPurchasing(false);
     }
   };
 
+  const totalCents = tickets.reduce((sum, ticket) => sum + (ticket.ticket_type_price_cents || 0), 0);
 
   if (loading) {
     return (
@@ -142,7 +163,7 @@ export default function CheckoutPage() {
           </CardHeader>
           <CardContent>
             <p className="text-muted-foreground mb-4">
-              Your reservation has expired or is invalid. Please select a seat again.
+              Your reservation has expired or is invalid. Please select seats again.
             </p>
             <Link href="/">
               <Button variant="outline">Go Home</Button>
@@ -153,7 +174,7 @@ export default function CheckoutPage() {
     );
   }
 
-  if (error || !ticket || !event) {
+  if (error || !tickets.length || !event) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <Card className="max-w-md">
@@ -176,12 +197,14 @@ export default function CheckoutPage() {
   return (
     <div className="min-h-screen bg-background">
       <div className="container mx-auto px-4 py-8 max-w-2xl">
-        <Link href="/">
-          <Button variant="ghost" className="mb-6">
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to Search
-          </Button>
-        </Link>
+        {event && (
+          <Link href={`/events/${event.id}`}>
+            <Button variant="ghost" className="mb-6">
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Back to Event
+            </Button>
+          </Link>
+        )}
 
         <Card>
           <CardHeader>
@@ -194,23 +217,23 @@ export default function CheckoutPage() {
             </div>
 
             <div className="border-t pt-4">
-              <h3 className="font-semibold mb-4">Ticket Details</h3>
-              <div className="space-y-2">
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Ticket Type:</span>
-                  <span className="font-medium">{ticket.ticket_type_display_name}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Price:</span>
-                  <span className="font-medium">{formatPrice(ticket.ticket_type_price_cents)}</span>
-                </div>
+              <h3 className="font-semibold mb-4">Ticket Details ({tickets.length} {tickets.length === 1 ? 'ticket' : 'tickets'})</h3>
+              <div className="space-y-3">
+                {tickets.map((ticket) => (
+                  <div key={ticket.id} className="flex justify-between items-center p-3 rounded-lg bg-muted/50">
+                    <div>
+                      <p className="font-medium">{ticket.ticket_type_display_name || ticket.ticket_type_name}</p>
+                      </div>
+                    <span className="font-semibold">{formatPrice(ticket.ticket_type_price_cents || 0)}</span>
+                  </div>
+                ))}
               </div>
             </div>
 
             <div className="border-t pt-4">
               <div className="flex justify-between items-center mb-4">
                 <span className="text-lg font-semibold">Total:</span>
-                <span className="text-2xl font-bold">{formatPrice(ticket.ticket_type_price_cents)}</span>
+                <span className="text-2xl font-bold">{formatPrice(totalCents)}</span>
               </div>
               <Button
                 onClick={handlePurchase}

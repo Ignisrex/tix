@@ -5,7 +5,7 @@ import type { Ticket } from "@/types/events";
 import type { SectionSeatsProps } from "./types";
 import { SeatButton } from "./seat-button";
 
-export function SectionSeats({ section, onSeatSelect }: SectionSeatsProps) {
+export function SectionSeats({ section, selectedTicketIds, onSeatSelect }: SectionSeatsProps) {
   const handleSeatClick = (ticket: Ticket) => {
     if (ticket.status === "available" && onSeatSelect) {
       onSeatSelect(ticket.id);
@@ -33,6 +33,7 @@ export function SectionSeats({ section, onSeatSelect }: SectionSeatsProps) {
                 key={ticket.id}
                 ticket={ticket}
                 isAvailable={isAvailable}
+                isSelected={selectedTicketIds?.has(ticket.id) || false}
                 colorConfig={section.colorConfig}
                 onClick={() => handleSeatClick(ticket)}
               />

@@ -2,6 +2,7 @@ package config
 
 import (
 	"os"
+	"strconv"
 
 	"github.com/joho/godotenv"
 )
@@ -17,6 +18,8 @@ type Config struct {
 
 	RedisHost string
 	RedisPort string
+
+	ReservationTTLSeconds int
 }
 
 var Envs Config = initConfig()
@@ -33,6 +36,7 @@ func initConfig() Config {
 		DBName:    getEnv("DB_NAME", "tix_db"),
 		RedisHost: getEnv("REDIS_HOST", "ticket-lock"),
 		RedisPort: getEnv("REDIS_PORT", "6379"),
+		ReservationTTLSeconds: getEnvInt("RESERVATION_TTL_SECONDS", 180),
 	}
 }
 
@@ -47,6 +51,15 @@ func (c Config) RedisAddr() string {
 func getEnv(key, fallback string) string {
 	if v := os.Getenv(key); v != "" {
 		return v
+	}
+	return fallback
+}
+
+func getEnvInt(key string, fallback int) int {
+	if v := os.Getenv(key); v != "" {
+		if parsed, err := strconv.Atoi(v); err == nil && parsed > 0 {
+			return parsed
+		}
 	}
 	return fallback
 }

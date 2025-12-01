@@ -18,11 +18,15 @@ func NewService(bookingClient *bookingclient.Client) *Service {
 	}
 }
 
-func (s *Service) ReserveTicket(ctx context.Context, ticketID uuid.UUID) (*bookingclient.ReserveResponse, int, error) {
-	return s.bookingClient.ReserveTicket(ctx, ticketID)
+func (s *Service) ReserveTickets(ctx context.Context, ticketIDs []uuid.UUID) (*bookingclient.ReserveResponse, int, error) {
+	return s.bookingClient.ReserveTickets(ctx, ticketIDs)
 }
 
-func (s *Service) PurchaseTicket(ctx context.Context, ticketID uuid.UUID) (*bookingclient.PurchaseResponse, int, error) {
-	return s.bookingClient.PurchaseTicket(ctx, ticketID)
+func (s *Service) PurchaseTickets(ctx context.Context, ticketIDs []uuid.UUID) (*bookingclient.PurchaseResponse, int, error) {
+	return s.bookingClient.PurchaseTickets(ctx, ticketIDs)
+}
+
+func (s *Service) GetPurchaseDetails(ctx context.Context, purchaseID uuid.UUID) (*bookingclient.PurchaseDetailsResponse, int, error) {
+	return s.bookingClient.GetPurchaseDetails(ctx, purchaseID)
 }
 
