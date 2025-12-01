@@ -130,3 +130,44 @@ func (c *Client) ReleaseTickets(ctx context.Context, ticketIDs []uuid.UUID) erro
 	return nil
 }
 
+// AreReserved checks if multiple tickets are reserved.
+// Returns a map of ticketID -> is_reserved (true if reserved, false if available).
+func (c *Client) AreReserved(ctx context.Context, ticketIDs []uuid.UUID) (map[uuid.UUID]bool, error) {
+	if len(ticketIDs) == 0 {
+		return make(map[uuid.UUID]bool), nil
+	}
+
+	results := make(map[uuid.UUID]bool)
+	pipe := c.rdb.Pipeline()
+
+	// Prepare all EXISTS operations
+	ops := make(map[string]uuid.UUID)
+	for _, ticketID := range ticketIDs {
+		key := keyPrefix + ticketID.String()
+		ops[key] = ticketID
+		pipe.Exists(ctx, key)
+	}
+
+	// Execute all operations atomically
+	cmds, err := pipe.Exec(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to check reservations: %w", err)
+	}
+
+	// Process results
+	for i, ticketID := range ticketIDs {
+		if i < len(cmds) {
+			existsCmd, ok := cmds[i].(*redis.IntCmd)
+			if ok {
+				results[ticketID] = existsCmd.Val() > 0
+			} else {
+				results[ticketID] = false
+			}
+		} else {
+			results[ticketID] = false
+		}
+	}
+
+	return results, nil
+}
+

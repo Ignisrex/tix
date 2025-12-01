@@ -232,4 +232,14 @@ func (s *Service) GetPurchaseDetails(ctx context.Context, purchaseID uuid.UUID) 
 	}, http.StatusOK, nil
 }
 
+// CheckTicketLocks checks the reservation status for multiple tickets.
+// Returns a map of ticketID -> is_reserved (true if reserved, false if available).
+func (s *Service) CheckTicketLocks(ctx context.Context, ticketIDs []uuid.UUID) (map[uuid.UUID]bool, error) {
+	if len(ticketIDs) == 0 {
+		return make(map[uuid.UUID]bool), nil
+	}
+
+	return s.redisClient.AreReserved(ctx, ticketIDs)
+}
+
 

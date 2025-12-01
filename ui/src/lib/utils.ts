@@ -42,3 +42,13 @@ export function formatDateLong(dateString: string): string {
     minute: "2-digit",
   });
 }
+
+/**
+ * Check if a ticket is available for selection
+ * A ticket is available if its status is "available" and it's not reserved
+ * @param ticket - Ticket to check
+ * @returns true if ticket is available, false otherwise
+ */
+export function isTicketAvailable(ticket: { status: string; is_reserved?: boolean }): boolean {
+  return ticket.status === "available" && !ticket.is_reserved;
+}

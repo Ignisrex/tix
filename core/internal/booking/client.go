@@ -63,6 +63,14 @@ type PurchaseDetailsResponse struct {
 	Tickets           []PurchaseTicketDetail `json:"tickets"`
 }
 
+type CheckLocksRequest struct {
+	TicketIDs []uuid.UUID `json:"ticket_ids"`
+}
+
+type CheckLocksResponse struct {
+	Locks map[string]bool `json:"locks"` // ticket_id (string) -> is_reserved (bool)
+}
+
 func (c *Client) ReserveTickets(ctx context.Context, ticketIDs []uuid.UUID) (*ReserveResponse, int, error) {
 	url := fmt.Sprintf("%s/api/v1/booking/reserve", c.baseURL)
 	
@@ -117,5 +125,40 @@ func (c *Client) GetPurchaseDetails(ctx context.Context, purchaseID uuid.UUID) (
 	}
 	
 	return utils.UnmarshalJSONResponse[PurchaseDetailsResponse](body, statusCode, "booking service")
+}
+
+func (c *Client) CheckTicketLocks(ctx context.Context, ticketIDs []uuid.UUID) (map[uuid.UUID]bool, int, error) {
+	url := fmt.Sprintf("%s/api/v1/booking/locks/check", c.baseURL)
+	
+	reqBody := CheckLocksRequest{
+		TicketIDs: ticketIDs,
+	}
+	
+	req, err := utils.MakeJSONRequest(ctx, "POST", url, reqBody)
+	if err != nil {
+		return nil, http.StatusInternalServerError, err
+	}
+	
+	body, statusCode, err := utils.ExecuteRequest(c.httpClient, req)
+	if err != nil {
+		return nil, statusCode, err
+	}
+	
+	resp, statusCode, err := utils.UnmarshalJSONResponse[CheckLocksResponse](body, statusCode, "booking service")
+	if err != nil {
+		return nil, statusCode, err
+	}
+	
+	// Convert string map back to UUID map
+	locks := make(map[uuid.UUID]bool)
+	for ticketIDStr, isReserved := range resp.Locks {
+		ticketID, err := uuid.Parse(ticketIDStr)
+		if err != nil {
+			continue // Skip invalid UUIDs
+		}
+		locks[ticketID] = isReserved
+	}
+	
+	return locks, statusCode, nil
 }
 

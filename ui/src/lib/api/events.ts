@@ -36,3 +36,11 @@ export async function getTicket(eventId: string, ticketId: string): Promise<Tick
   return request<Ticket>(`/events/${eventId}/tickets/${ticketId}`);
 }
 
+/**
+ * Create an EventSource for streaming ticket updates via SSE
+ */
+export function createTicketStream(eventId: string): EventSource {
+  const BASE_URL = process.env.NEXT_PUBLIC_CORE_API_URL || 'http://localhost:8080/api/v1';
+  const url = `${BASE_URL}/events/${eventId}/tickets/stream`;
+  return new EventSource(url);
+}

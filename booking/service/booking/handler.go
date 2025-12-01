@@ -30,6 +30,7 @@ func (h *Handler) RegisterRoutes(r chi.Router) {
 		r.Post("/reserve", h.handleReserve)
 		r.Post("/purchase", h.handlePurchase)
 		r.Get("/purchases/{id}", h.handleGetPurchase)
+		r.Post("/locks/check", h.handleCheckLocks)
 	})
 }
 
@@ -100,4 +101,35 @@ func (h *Handler) handleGetPurchase(w http.ResponseWriter, r *http.Request) {
 	}
 
 	utils.WriteJSON(w, statusCode, response)
+}
+
+func (h *Handler) handleCheckLocks(w http.ResponseWriter, r *http.Request) {
+	var req types.CheckLocksRequest
+	if err := utils.DecodeJSON(r, &req); err != nil {
+		utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("invalid request body: %w", err))
+		return
+	}
+
+	if len(req.TicketIDs) == 0 {
+		utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("ticket_ids cannot be empty"))
+		return
+	}
+
+	locks, err := h.service.CheckTicketLocks(r.Context(), req.TicketIDs)
+	if err != nil {
+		utils.WriteError(w, http.StatusInternalServerError, fmt.Errorf("failed to check locks: %w", err))
+		return
+	}
+
+	// Convert UUID map to string map for JSON
+	locksMap := make(map[string]bool)
+	for ticketID, isReserved := range locks {
+		locksMap[ticketID.String()] = isReserved
+	}
+
+	response := types.CheckLocksResponse{
+		Locks: locksMap,
+	}
+
+	utils.WriteJSON(w, http.StatusOK, response)
 }

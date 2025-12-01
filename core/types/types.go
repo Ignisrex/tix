@@ -36,6 +36,7 @@ type Ticket struct {
 	TicketTypeName        string `json:"ticket_type_name"`
 	TicketTypeDisplayName string `json:"ticket_type_display_name,omitempty"`
 	TicketTypePriceCents  int32  `json:"ticket_type_price_cents"`
+	IsReserved  bool     `json:"is_reserved,omitempty"`
 }
 
 type CreateEventRequest struct {

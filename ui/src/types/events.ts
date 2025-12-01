@@ -48,6 +48,7 @@ export interface Ticket {
   ticket_type_name: string;
   ticket_type_display_name: string;
   ticket_type_price_cents: number;
+  is_reserved?: boolean;
 }
 
 export interface TicketType {

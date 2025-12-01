@@ -43,3 +43,11 @@ type PurchaseDetailsResponse struct {
 	Tickets           []PurchaseTicketDetail `json:"tickets"`
 }
 
+type CheckLocksRequest struct {
+	TicketIDs []uuid.UUID `json:"ticket_ids"`
+}
+
+type CheckLocksResponse struct {
+	Locks map[string]bool `json:"locks"` // ticket_id (string) -> is_reserved (bool)
+}
+

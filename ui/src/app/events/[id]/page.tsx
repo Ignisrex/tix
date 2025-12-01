@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { getEvent, getEventTickets, reserveTickets } from "@/lib/api";
+import { getEvent, reserveTickets } from "@/lib/api";
+import { useTicketStream } from "@/hooks/use-ticket-stream";
 import type { Event, Ticket } from "@/types/events";
 import type { ReservationData } from "@/types/booking";
 import { Button } from "@/components/ui/button";
@@ -20,22 +21,20 @@ export default function EventDetailPage() {
   const eventId = params.id as string;
 
   const [event, setEvent] = useState<Event | null>(null);
-  const [tickets, setTickets] = useState<Ticket[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedTickets, setSelectedTickets] = useState<Ticket[]>([]);
   const [isReserving, setIsReserving] = useState(false);
 
+  // Use SSE hook for real-time ticket updates
+  const { tickets, error: streamError } = useTicketStream(eventId);
+
   useEffect(() => {
-    async function fetchData() {
+    async function fetchEvent() {
       try {
         setLoading(true);
-        const [eventData, ticketsData] = await Promise.all([
-          getEvent(eventId),
-          getEventTickets(eventId),
-        ]);
+        const eventData = await getEvent(eventId);
         setEvent(eventData);
-        setTickets(ticketsData);
       } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to load event");
       } finally {
@@ -44,7 +43,7 @@ export default function EventDetailPage() {
     }
 
     if (eventId) {
-      fetchData();
+      fetchEvent();
     }
   }, [eventId]);
 
@@ -65,7 +64,10 @@ export default function EventDetailPage() {
     );
   }
 
-  if (error || !event) {
+  // Combine errors
+  const displayError = error || (streamError ? streamError.message : null);
+
+  if (displayError || !event) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <Card className="max-w-md">
@@ -74,7 +76,7 @@ export default function EventDetailPage() {
           </CardHeader>
           <CardContent>
             <p className="text-muted-foreground mb-4">
-              {error || "Event not found"}
+              {displayError || "Event not found"}
             </p>
             <Link href="/">
               <Button variant="outline">Go Home</Button>

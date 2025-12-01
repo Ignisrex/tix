@@ -48,7 +48,13 @@ export function SeatButton({ ticket, isAvailable, isSelected, colorConfig, onCli
         flex items-center justify-center text-xs font-medium
         ${isAvailable ? colorConfig.color : 'text-gray-500'}
       `}
-      title={isAvailable ? `Seat ${ticket.id.slice(0, 8)} - Available` : `Seat ${ticket.id.slice(0, 8)} - Sold`}
+      title={
+        isAvailable 
+          ? `Seat ${ticket.id.slice(0, 8)} - Available` 
+          : ticket.is_reserved 
+            ? `Seat ${ticket.id.slice(0, 8)} - Reserved` 
+            : `Seat ${ticket.id.slice(0, 8)} - Sold`
+      }
     >
       {ticket.id.slice(0, 4)}
       

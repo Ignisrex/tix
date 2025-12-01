@@ -1,14 +1,19 @@
 package events
 
 import (
+	"context"
 	"database/sql"
+	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 
+	bookingclient "github.com/ignisrex/tix/core/internal/booking"
 	"github.com/ignisrex/tix/core/internal/database"
 	"github.com/ignisrex/tix/core/internal/elasticsearch"
 	"github.com/ignisrex/tix/core/internal/search"
@@ -19,11 +24,12 @@ import (
 )
 
 type Handler struct {
-	eventService *Service
-	ticketService *tickets.Service
+	eventService   *Service
+	ticketService  *tickets.Service
+	bookingClient  *bookingclient.Client
 }
 
-func NewHandler(queries *database.Queries, db *sql.DB, esClient *elasticsearch.Client, searchClient *search.Client) *Handler {
+func NewHandler(queries *database.Queries, db *sql.DB, esClient *elasticsearch.Client, searchClient *search.Client, bookingClient *bookingclient.Client) *Handler {
 	ticketRepo := tickets.NewRepo(queries)
 	ticketService := tickets.NewService(ticketRepo)
 
@@ -34,8 +40,9 @@ func NewHandler(queries *database.Queries, db *sql.DB, esClient *elasticsearch.C
 	eventService := NewService(eventRepo, ticketService, venueService, esClient, searchClient)
 	
 	return &Handler{
-		eventService: eventService,
+		eventService:  eventService,
 		ticketService: ticketService,
+		bookingClient: bookingClient,
 	}
 }
 
@@ -49,6 +56,7 @@ func (h *Handler) RegisterRoutes(r chi.Router) {
 
 		r.Route("/{event_id}/tickets", func(r chi.Router) {
 			r.Get("/", h.GetTickets)
+			r.Get("/stream", h.StreamTickets)
 			r.Get("/{ticket_id}", h.GetTicket)
 		})
 	})
@@ -148,4 +156,104 @@ func (h *Handler) GetTicket(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	utils.WriteJSON(w, http.StatusOK, ticket)
+}
+
+// enrichTicketsWithLocks adds lock status to tickets by checking the booking service
+func (h *Handler) enrichTicketsWithLocks(ctx context.Context, tickets []types.Ticket) ([]types.Ticket, error) {
+	if h.bookingClient == nil {
+		// If booking client is not available, return tickets without lock status
+		return tickets, nil
+	}
+
+	if len(tickets) == 0 {
+		return tickets, nil
+	}
+
+	// Collect all ticket IDs
+	ticketIDs := make([]uuid.UUID, 0, len(tickets))
+	for _, ticket := range tickets {
+		ticketIDs = append(ticketIDs, ticket.ID)
+	}
+
+	// Check lock status for all tickets
+	locks, _, err := h.bookingClient.CheckTicketLocks(ctx, ticketIDs)
+	if err != nil {
+		log.Printf("Warning: failed to check ticket locks: %v", err)
+		// Continue without lock status if check fails
+		return tickets, nil
+	}
+
+	// Enrich tickets with lock status
+	enriched := make([]types.Ticket, len(tickets))
+	for i, ticket := range tickets {
+		enriched[i] = ticket
+		enriched[i].IsReserved = locks[ticket.ID]
+	}
+
+	return enriched, nil
+}
+
+
+func (h *Handler) StreamTickets(w http.ResponseWriter, r *http.Request) {
+	eventID := chi.URLParam(r, "event_id")
+	eventUUID := uuid.MustParse(eventID)
+
+	// Set up SSE headers
+	w.Header().Set("Content-Type", "text/event-stream")
+	w.Header().Set("Cache-Control", "no-cache")
+	w.Header().Set("Connection", "keep-alive")
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Access-Control-Allow-Headers", "Cache-Control")
+
+	// Create a context that cancels when client disconnects
+	ctx := r.Context()
+
+	// Create a ticker for 2-second updates;TODO: should be configurable
+	ticker := time.NewTicker(2 * time.Second)
+	defer ticker.Stop()
+
+	// Send initial data immediately
+	h.sendTicketUpdate(w, ctx, eventUUID)
+
+	// Stream updates every 2 seconds
+	for {
+		select {
+		case <-ctx.Done():
+			// Client disconnected
+			return
+		case <-ticker.C:
+			if err := h.sendTicketUpdate(w, ctx, eventUUID); err != nil {
+				log.Printf("Error sending ticket update: %v", err)
+				return
+			}
+			// Flush the response to ensure data is sent immediately
+			if flusher, ok := w.(http.Flusher); ok {
+				flusher.Flush()
+			}
+		}
+	}
+}
+
+func (h *Handler) sendTicketUpdate(w http.ResponseWriter, ctx context.Context, eventID uuid.UUID) error {
+	// Fetch tickets from database
+	tickets, err := h.ticketService.GetTicketsForEvent(ctx, eventID)
+	if err != nil {
+		return fmt.Errorf("failed to get tickets: %w", err)
+	}
+
+	enrichedTickets, _ := h.enrichTicketsWithLocks(ctx, tickets)
+
+	// Marshal to JSON
+	jsonData, err := json.Marshal(enrichedTickets)
+	if err != nil {
+		return fmt.Errorf("failed to marshal tickets: %w", err)
+	}
+
+	// Write SSE formatted data
+	_, err = fmt.Fprintf(w, "data: %s\n\n", jsonData)
+	if err != nil {
+		return fmt.Errorf("failed to write SSE data: %w", err)
+	}
+
+	return nil
 }

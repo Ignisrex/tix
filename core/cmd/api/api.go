@@ -60,7 +60,7 @@ func (s *APIServer) Run() error {
 	v1 := chi.NewRouter()
 	v1.Get("/healthz", nil)
 
-	eventHandler := events.NewHandler(s.q, s.sqlDB, s.esClient, s.searchClient)
+	eventHandler := events.NewHandler(s.q, s.sqlDB, s.esClient, s.searchClient, s.bookingClient)
 	eventHandler.RegisterRoutes(v1)
 
 	venueHandler := venues.NewHandler(s.q)
