@@ -2,14 +2,16 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { getEvent, getEventTickets } from "@/lib/api";
+import { getEvent, getEventTickets, reserveTicket } from "@/lib/api";
 import type { Event, Ticket } from "@/types/events";
+import type { ReservationData } from "@/types/booking";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { SeatView } from "@/components/seat-view";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
+import { formatDateLong } from "@/lib/utils";
 
 export default function EventDetailPage() {
   const params = useParams();
@@ -80,16 +82,6 @@ export default function EventDetailPage() {
     );
   }
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString("en-US", {
-      weekday: "long",
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-      hour: "numeric",
-      minute: "2-digit",
-    });
-  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -106,7 +98,7 @@ export default function EventDetailPage() {
         <div className="mb-8">
           <h1 className="text-4xl font-bold mb-4">{event.title}</h1>
           <div className="text-lg text-muted-foreground mb-4">
-            {formatDate(event.start_date)}
+            {formatDateLong(event.start_date)}
           </div>
           <p className="text-base leading-relaxed">{event.description}</p>
         </div>
@@ -126,8 +118,29 @@ export default function EventDetailPage() {
           ) : (
             <SeatView
               tickets={tickets}
-              onSeatSelect={(ticketId) => {
-                router.push(`/booking/${ticketId}`);
+              onSeatSelect={async (ticketId) => {
+                try {
+                  const response = await reserveTicket(ticketId);
+                  
+                  if (response.success) {
+                    // Store reservation in localStorage
+                    const reservationData: ReservationData = {
+                      ticketId: response.ticket_id,
+                      eventId: eventId,
+                      reservedAt: Date.now(),
+                    };
+                    localStorage.setItem("tix_reservation", JSON.stringify(reservationData));
+                    
+                    // Route to checkout
+                    router.push(`/checkout/${response.ticket_id}`);
+                  } else {
+                    // Show alert for failure
+                    alert(response.message || "This seat is not available");
+                  }
+                } catch (err) {
+                  const errorMessage = err instanceof Error ? err.message : "Failed to reserve ticket";
+                  alert(errorMessage || "This seat is not available");
+                }
               }}
             />
           )}

@@ -120,3 +120,22 @@
     @apply bg-background text-foreground;
   }
 }
+
+@keyframes ripple {
+  0% {
+    width: 0;
+    height: 0;
+    opacity: 0.6;
+  }
+  100% {
+    width: 200px;
+    height: 200px;
+    opacity: 0;
+  }
+}
+
+@layer utilities {
+  .animate-ripple {
+    animation: ripple 600ms ease-out;
+  }
+}

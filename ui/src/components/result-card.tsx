@@ -1,27 +1,15 @@
 import { Card, CardContent } from "@/components/ui/card";
 import Link from "next/link";
+import { formatDateShort } from "@/lib/utils";
 
 interface ResultCardProps {
   id: string;
   title: string;
   location: string;
   date?: string;
-  price?: number;
 }
 
-export function ResultCard({ id, title, location, date, price }: ResultCardProps) {
-  const formatPrice = (cents: number) => {
-    return `$${(cents / 100).toFixed(2)}`;
-  };
-
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-    });
-  };
-
+export function ResultCard({ id, title, location, date }: ResultCardProps) {
   return (
     <Link href={`/events/${id}`}>
       <Card className="overflow-hidden hover:shadow-lg transition-shadow cursor-pointer h-full gap-0 p-0">
@@ -34,14 +22,9 @@ export function ResultCard({ id, title, location, date, price }: ResultCardProps
         <CardContent className="p-4">
           <h3 className="font-semibold text-lg mb-2 line-clamp-2">{title}</h3>
           <p className="text-sm text-muted-foreground mb-3">{location}</p>
-          <div className="flex justify-between items-center">
-            {date && (
-              <span className="text-sm font-medium">{formatDate(date)}</span>
-            )}
-            {price && (
-              <span className="text-base font-semibold">{formatPrice(price)}</span>
-            )}
-          </div>
+          {date && (
+            <span className="text-sm font-medium">{formatDateShort(date)}</span>
+          )}
         </CardContent>
       </Card>
     </Link>

@@ -1,6 +1,6 @@
 
 export { request } from './client';
-export { searchEvents, getEvent, getEventTickets } from './events';
+export { searchEvents, getEvent, getEventTickets, getTicket } from './events';
 export { reserveTicket, purchaseTicket } from './booking';
 
 export type { ApiException, ApiError, RequestOptions } from '@/types/api';

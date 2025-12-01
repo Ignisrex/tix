@@ -53,3 +53,7 @@ func (s *Service) CreateTicketsForEvent(ctx context.Context, eventID uuid.UUID, 
 
 	return s.repo.CreateTicketsForEvent(ctx, eventID, ticketTypeIDs, tx)
 }
+
+func (s *Service) GetTicket(ctx context.Context, eventID uuid.UUID, ticketID uuid.UUID) (types.Ticket, error) {
+	return s.repo.GetTicket(ctx, eventID, ticketID)
+}

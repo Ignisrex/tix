@@ -4,7 +4,7 @@ import { useState } from "react";
 import { SearchBar } from "@/components/search-bar";
 import { SearchResults } from "@/components/search-results";
 import { searchEvents } from "@/lib/api";
-import type { Event, SearchResult } from "@/types/events";
+import type { SearchEventResult, SearchResult } from "@/types/events";
 
 export default function Home() {
   const [isFocused, setIsFocused] = useState(false);
@@ -26,13 +26,12 @@ export default function Home() {
     try {
       const events = await searchEvents(searchQuery);
       
-      // Map backend Event format to UI SearchResult format
-      const mappedResults: SearchResult[] = events.map((event: Event) => ({
+      // Map SearchEventResult to UI SearchResult format
+      const mappedResults: SearchResult[] = events.map((event: SearchEventResult) => ({
         id: event.id,
         title: event.title,
-        location: "Location TBD", // TODO: Fetch venue info or use SearchEventResult if available
+        location: event.venue_location || `${event.venue_name || "Unknown venue"}`,
         date: event.start_date,
-        price: undefined, // TODO: Fetch ticket prices if needed
       }));
 
       setResults(mappedResults);
@@ -46,10 +45,7 @@ export default function Home() {
 
   return (
     <main className="min-h-screen flex flex-col">
-      {/* Background gradient - only shows when not focused */}
-      {!isFocused && (
-        <div className="absolute inset-0 bg-gradient-to-b from-background to-muted -z-10" />
-      )}
+      <div className="absolute inset-0 bg-gradient-to-b from-background to-muted -z-10" />
 
       {/* Search bar container - moves up slightly when hero fades */}
       <div

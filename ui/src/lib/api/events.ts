@@ -29,3 +29,10 @@ export async function getEventTickets(eventId: string): Promise<Ticket[]> {
   return request<Ticket[]>(`/events/${eventId}/tickets`);
 }
 
+/**
+ * Get a ticket by ID
+ */
+export async function getTicket(eventId: string, ticketId: string): Promise<Ticket> {
+  return request<Ticket>(`/events/${eventId}/tickets/${ticketId}`);
+}
+

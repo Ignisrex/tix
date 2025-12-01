@@ -44,7 +44,7 @@ export function SearchBar({ onFocus, onSearch, query: controlledQuery }: SearchB
           onChange={handleInputChange}
           onFocus={handleFocus}
           placeholder="Search events, venues, artists..."
-          className="h-8 border-0 p-0 text-base shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
+          className="h-8 border-0 p-0 text-base shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 bg-transparent focus:bg-transparent"
         />
       </div>
 

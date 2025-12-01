@@ -35,7 +35,6 @@ export interface SearchResult {
   title: string;
   location: string;
   date?: string;
-  price?: number;
 }
 
 

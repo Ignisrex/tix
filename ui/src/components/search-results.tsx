@@ -51,7 +51,6 @@ export function SearchResults({ query, results, loading }: SearchResultsProps) {
             title={result.title}
             location={result.location}
             date={result.date}
-            price={result.price}
           />
         ))}
       </div>

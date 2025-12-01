@@ -49,6 +49,7 @@ func (h *Handler) RegisterRoutes(r chi.Router) {
 
 		r.Route("/{event_id}/tickets", func(r chi.Router) {
 			r.Get("/", h.GetTickets)
+			r.Get("/{ticket_id}", h.GetTicket)
 		})
 	})
 }
@@ -136,4 +137,15 @@ func (h *Handler) GetTickets(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	utils.WriteJSON(w, http.StatusOK, tickets)
+}
+
+func (h *Handler) GetTicket(w http.ResponseWriter, r *http.Request) {
+	eventID := chi.URLParam(r, "event_id")
+	ticketID := chi.URLParam(r, "ticket_id")
+	ticket, err := h.ticketService.GetTicket(r.Context(), uuid.MustParse(eventID), uuid.MustParse(ticketID))
+	if err != nil {
+		utils.WriteError(w, http.StatusInternalServerError, fmt.Errorf("failed to get ticket: %w", err))
+		return
+	}
+	utils.WriteJSON(w, http.StatusOK, ticket)
 }
