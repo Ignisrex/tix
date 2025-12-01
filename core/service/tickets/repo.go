@@ -1,15 +1,15 @@
 package tickets
 
 import (
-	"fmt"
 	"context"
 	"database/sql"
+	"fmt"
 
 	"github.com/google/uuid"
 
 	"github.com/ignisrex/tix/core/internal/database"
-	"github.com/ignisrex/tix/core/types"
 	"github.com/ignisrex/tix/core/mappers"
+	"github.com/ignisrex/tix/core/types"
 )
 
 type Repo struct {
@@ -26,12 +26,12 @@ func NewRepo(queries *database.Queries) *Repo {
 func (r *Repo) GetTicket(ctx context.Context, eventID uuid.UUID, ticketID uuid.UUID) (types.Ticket, error) {
 	dbTicket, err := r.queries.GetTicket(ctx, database.GetTicketParams{
 		EventID: eventID,
-		ID: ticketID,
+		ID:      ticketID,
 	})
 	if err != nil {
 		return types.Ticket{}, err
 	}
-	return mappers.ToTicket(dbTicket), nil
+	return mappers.ToEnrichedTicket(dbTicket), nil
 }
 
 func (r *Repo) GetTicketsForEvent(ctx context.Context, eventID uuid.UUID) ([]types.Ticket, error) {
@@ -39,7 +39,7 @@ func (r *Repo) GetTicketsForEvent(ctx context.Context, eventID uuid.UUID) ([]typ
 	if err != nil {
 		return nil, err
 	}
-	return mappers.ToTickets(dbTickets), nil
+	return mappers.ToEnrichedTickets(dbTickets), nil
 }
 
 func (r *Repo) CreateTicketsForEvent(ctx context.Context, eventID uuid.UUID, ticketTypeIDs []uuid.UUID, tx *sql.Tx) ([]types.Ticket, error) {

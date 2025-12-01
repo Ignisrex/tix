@@ -29,10 +29,13 @@ type Venue struct {
 }
 
 type Ticket struct {
-	ID        uuid.UUID `json:"id"`
-	EventID   uuid.UUID `json:"event_id" validate:"required"`
+	ID           uuid.UUID `json:"id"`
+	EventID      uuid.UUID `json:"event_id" validate:"required"`
 	TicketTypeID uuid.UUID `json:"ticket_type_id" validate:"required"`
-	Status    TicketStatus `json:"status"`
+	Status       TicketStatus `json:"status"`
+	TicketTypeName        string `json:"ticket_type_name"`
+	TicketTypeDisplayName string `json:"ticket_type_display_name,omitempty"`
+	TicketTypePriceCents  int32  `json:"ticket_type_price_cents"`
 }
 
 type CreateEventRequest struct {

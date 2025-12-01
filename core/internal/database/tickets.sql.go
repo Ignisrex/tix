@@ -57,7 +57,17 @@ func (q *Queries) BatchCreateTickets(ctx context.Context, arg BatchCreateTickets
 }
 
 const getTicket = `-- name: GetTicket :one
-SELECT id, event_id, ticket_type_id, status, created_at, updated_at FROM tickets
+SELECT 
+    id,
+    event_id,
+    ticket_type_id,
+    status,
+    created_at,
+    updated_at,
+    ticket_type_name,
+    ticket_type_display_name,
+    ticket_type_price_cents
+FROM enriched_tickets
 WHERE event_id = $1 AND id = $2
 `
 
@@ -66,9 +76,9 @@ type GetTicketParams struct {
 	ID      uuid.UUID
 }
 
-func (q *Queries) GetTicket(ctx context.Context, arg GetTicketParams) (Ticket, error) {
+func (q *Queries) GetTicket(ctx context.Context, arg GetTicketParams) (EnrichedTicket, error) {
 	row := q.db.QueryRowContext(ctx, getTicket, arg.EventID, arg.ID)
-	var i Ticket
+	var i EnrichedTicket
 	err := row.Scan(
 		&i.ID,
 		&i.EventID,
@@ -76,12 +86,15 @@ func (q *Queries) GetTicket(ctx context.Context, arg GetTicketParams) (Ticket, e
 		&i.Status,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.TicketTypeName,
+		&i.TicketTypeDisplayName,
+		&i.TicketTypePriceCents,
 	)
 	return i, err
 }
 
 const getTicketTypes = `-- name: GetTicketTypes :many
-SELECT id, name, description, price_cents FROM ticket_types
+SELECT id, name, display_name, price_cents FROM ticket_types
 `
 
 func (q *Queries) GetTicketTypes(ctx context.Context) ([]TicketType, error) {
@@ -96,7 +109,7 @@ func (q *Queries) GetTicketTypes(ctx context.Context) ([]TicketType, error) {
 		if err := rows.Scan(
 			&i.ID,
 			&i.Name,
-			&i.Description,
+			&i.DisplayName,
 			&i.PriceCents,
 		); err != nil {
 			return nil, err
@@ -113,19 +126,30 @@ func (q *Queries) GetTicketTypes(ctx context.Context) ([]TicketType, error) {
 }
 
 const getTicketsForEvent = `-- name: GetTicketsForEvent :many
-SELECT id, event_id, ticket_type_id, status, created_at, updated_at FROM tickets
+SELECT 
+    id,
+    event_id,
+    ticket_type_id,
+    status,
+    created_at,
+    updated_at,
+    ticket_type_name,
+    ticket_type_display_name,
+    ticket_type_price_cents
+FROM enriched_tickets
 WHERE event_id = $1
+ORDER BY ticket_type_id, id
 `
 
-func (q *Queries) GetTicketsForEvent(ctx context.Context, eventID uuid.UUID) ([]Ticket, error) {
+func (q *Queries) GetTicketsForEvent(ctx context.Context, eventID uuid.UUID) ([]EnrichedTicket, error) {
 	rows, err := q.db.QueryContext(ctx, getTicketsForEvent, eventID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []Ticket
+	var items []EnrichedTicket
 	for rows.Next() {
-		var i Ticket
+		var i EnrichedTicket
 		if err := rows.Scan(
 			&i.ID,
 			&i.EventID,
@@ -133,6 +157,9 @@ func (q *Queries) GetTicketsForEvent(ctx context.Context, eventID uuid.UUID) ([]
 			&i.Status,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.TicketTypeName,
+			&i.TicketTypeDisplayName,
+			&i.TicketTypePriceCents,
 		); err != nil {
 			return nil, err
 		}

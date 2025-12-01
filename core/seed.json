@@ -1,0 +1,151 @@
+{
+  "venues": [
+    { "name": "Downtown Arena", "location": "New York, NY" },
+    { "name": "Harbor Pavilion", "location": "Boston, MA" },
+    { "name": "Sunset Amphitheater", "location": "Los Angeles, CA" },
+    { "name": "Riverfront Hall", "location": "Chicago, IL" },
+    { "name": "Skyline Center", "location": "San Francisco, CA" }
+  ],
+  "events": [
+    {
+      "title": "Rock Night NYC",
+      "description": "High-energy rock show in the city.",
+      "start_date": "2028-01-10T20:00:00Z",
+      "venue_name": "Downtown Arena",
+      "ticket_allocation": { "vip": 25, "ga": 250, "front_row": 30 }
+    },
+    {
+      "title": "Indie Fest Brooklyn",
+      "description": "Indie bands all night.",
+      "start_date": "2028-01-12T19:30:00Z",
+      "venue_name": "Downtown Arena",
+      "ticket_allocation": { "vip": 15, "ga": 300, "front_row": 20 }
+    },
+    {
+      "title": "Tech Conference 2025",
+      "description": "Talks, workshops, and networking.",
+      "start_date": "2028-02-05T09:00:00Z",
+      "venue_name": "Riverfront Hall",
+      "ticket_allocation": { "vip": 40, "ga": 400, "front_row": 50 }
+    },
+    {
+      "title": "Jazz Evening LA",
+      "description": "Smooth jazz under the stars.",
+      "start_date": "2028-01-20T21:00:00Z",
+      "venue_name": "Sunset Amphitheater",
+      "ticket_allocation": { "vip": 20, "ga": 150, "front_row": 25 }
+    },
+    {
+      "title": "Comedy Night SF",
+      "description": "Stand-up from top comedians.",
+      "start_date": "2028-01-18T20:30:00Z",
+      "venue_name": "Skyline Center",
+      "ticket_allocation": { "vip": 10, "ga": 200, "front_row": 15 }
+    },
+    {
+      "title": "Classical Gala",
+      "description": "An evening of classical masterpieces.",
+      "start_date": "2028-02-10T19:00:00Z",
+      "venue_name": "Harbor Pavilion",
+      "ticket_allocation": { "vip": 30, "ga": 180, "front_row": 20 }
+    },
+    {
+      "title": "Hip Hop Showcase",
+      "description": "Local and national hip hop artists.",
+      "start_date": "2028-01-25T22:00:00Z",
+      "venue_name": "Downtown Arena",
+      "ticket_allocation": { "vip": 20, "ga": 350, "front_row": 30 }
+    },
+    {
+      "title": "Startup Pitch Night",
+      "description": "Founders pitching to investors.",
+      "start_date": "2028-02-15T18:00:00Z",
+      "venue_name": "Riverfront Hall",
+      "ticket_allocation": { "vip": 15, "ga": 120, "front_row": 10 }
+    },
+    {
+      "title": "EDM Rave LA",
+      "description": "Late-night electronic dance music.",
+      "start_date": "2028-01-30T23:00:00Z",
+      "venue_name": "Sunset Amphitheater",
+      "ticket_allocation": { "vip": 50, "ga": 500, "front_row": 40 }
+    },
+    {
+      "title": "Food & Wine Expo",
+      "description": "Tastings from top chefs and wineries.",
+      "start_date": "2028-03-01T11:00:00Z",
+      "venue_name": "Harbor Pavilion",
+      "ticket_allocation": { "vip": 25, "ga": 300, "front_row": 0 }
+    },
+    {
+      "title": "Gaming Convention",
+      "description": "Esports, cosplay, and new releases.",
+      "start_date": "2028-03-10T10:00:00Z",
+      "venue_name": "Skyline Center",
+      "ticket_allocation": { "vip": 40, "ga": 600, "front_row": 60 }
+    },
+    {
+      "title": "Book Fair Chicago",
+      "description": "Authors, signings, and panels.",
+      "start_date": "2028-02-20T10:00:00Z",
+      "venue_name": "Riverfront Hall",
+      "ticket_allocation": { "vip": 10, "ga": 200, "front_row": 0 }
+    },
+    {
+      "title": "Art Expo NY",
+      "description": "Modern art from emerging artists.",
+      "start_date": "2028-03-05T12:00:00Z",
+      "venue_name": "Downtown Arena",
+      "ticket_allocation": { "vip": 20, "ga": 250, "front_row": 0 }
+    },
+    {
+      "title": "Film Festival LA",
+      "description": "Screenings and Q&A sessions.",
+      "start_date": "2028-03-15T14:00:00Z",
+      "venue_name": "Sunset Amphitheater",
+      "ticket_allocation": { "vip": 30, "ga": 220, "front_row": 15 }
+    },
+    {
+      "title": "Charity Gala Boston",
+      "description": "Black-tie fundraising event.",
+      "start_date": "2028-02-25T19:30:00Z",
+      "venue_name": "Harbor Pavilion",
+      "ticket_allocation": { "vip": 50, "ga": 150, "front_row": 20 }
+    },
+    {
+      "title": "Startup Hackathon",
+      "description": "48-hour coding competition.",
+      "start_date": "2028-03-20T09:00:00Z",
+      "venue_name": "Skyline Center",
+      "ticket_allocation": { "vip": 10, "ga": 180, "front_row": 0 }
+    },
+    {
+      "title": "Choir Festival",
+      "description": "Choirs from around the country.",
+      "start_date": "2028-02-28T17:00:00Z",
+      "venue_name": "Riverfront Hall",
+      "ticket_allocation": { "vip": 20, "ga": 220, "front_row": 10 }
+    },
+    {
+      "title": "Sports Awards Night",
+      "description": "Honoring local sports teams.",
+      "start_date": "2028-03-25T19:00:00Z",
+      "venue_name": "Downtown Arena",
+      "ticket_allocation": { "vip": 35, "ga": 300, "front_row": 25 }
+    },
+    {
+      "title": "Latin Dance Party",
+      "description": "Live salsa and bachata bands.",
+      "start_date": "2028-03-30T21:00:00Z",
+      "venue_name": "Harbor Pavilion",
+      "ticket_allocation": { "vip": 25, "ga": 260, "front_row": 20 }
+    },
+    {
+      "title": "Open Mic Night",
+      "description": "Local talent on stage.",
+      "start_date": "2028-02-08T20:00:00Z",
+      "venue_name": "Skyline Center",
+      "ticket_allocation": { "vip": 5, "ga": 120, "front_row": 10 }
+    }
+  ]
+}

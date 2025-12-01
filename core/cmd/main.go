@@ -1,8 +1,10 @@
 package main
 
 import (
+	"context"
 	"database/sql"
 	"log"
+	"os"
 
 	_ "github.com/lib/pq"
 
@@ -11,9 +13,11 @@ import (
 	"github.com/ignisrex/tix/core/internal/config"
 	"github.com/ignisrex/tix/core/internal/elasticsearch"
 	"github.com/ignisrex/tix/core/internal/search"
+	"github.com/ignisrex/tix/core/internal/seed"
 )
 
 func main() {
+	ctx := context.Background()
 
 	port := config.Envs.Port
 	if port == "" {
@@ -31,8 +35,7 @@ func main() {
 	}
 	defer conn.Close()
 
-	// Test the connection
-	if err := conn.Ping(); err != nil {
+	if err := conn.PingContext(ctx); err != nil {
 		log.Fatal("Error pinging database -> ", err)
 	}
 
@@ -47,11 +50,15 @@ func main() {
 		log.Printf("Successfully connected to Elasticsearch")
 	}
 
-	// Initialize search service client
+	if os.Getenv("SEED_ON_START") == "true" {
+		seedDatabase(ctx, conn, esClient)
+	}
+
+	
 	searchClient := search.NewClient(config.Envs.SearchServiceURL)
 	log.Printf("Search service client initialized with URL: %s", config.Envs.SearchServiceURL)
 
-	// Initialize booking service client
+	
 	bookingClient := bookingclient.NewClient(config.Envs.BookingServiceURL)
 	log.Printf("Booking service client initialized with URL: %s", config.Envs.BookingServiceURL)
 
@@ -61,4 +68,13 @@ func main() {
 		log.Fatal("Error starting API server -> ", err)
 	}
 
+}
+
+func seedDatabase(ctx context.Context, conn *sql.DB, esClient *elasticsearch.Client) {
+	log.Println("SEED_ON_START=true detected, running database seeder...")
+	if err := seed.Run(ctx, conn, esClient,"seed.json"); err != nil {
+		log.Printf("Warning: seeding failed: %v", err)
+	} else {
+		log.Println("Seeding completed successfully")
+	}
 }

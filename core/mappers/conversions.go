@@ -40,12 +40,13 @@ func ToVenues(dbVenues []database.Venue) []types.Venue {
 	return venues
 }
 
+
 func ToTicket(dbTicket database.Ticket) types.Ticket {
 	return types.Ticket{	
-		ID: dbTicket.ID,
-		EventID: dbTicket.EventID,
+		ID:           dbTicket.ID,
+		EventID:      dbTicket.EventID,
 		TicketTypeID: dbTicket.TicketTypeID,
-		Status: dbTicket.Status,
+		Status:       dbTicket.Status,
 	}
 }
 
@@ -53,6 +54,27 @@ func ToTickets(dbTickets []database.Ticket) []types.Ticket {
 	tickets := make([]types.Ticket, len(dbTickets))
 	for i, dbTicket := range dbTickets {
 		tickets[i] = ToTicket(dbTicket)
+	}
+	return tickets
+}
+
+// ToEnrichedTicket maps an enriched database.EnrichedTicket to types.Ticket
+func ToEnrichedTicket(dbTicket database.EnrichedTicket) types.Ticket {
+	return types.Ticket{
+		ID:                    dbTicket.ID,
+		EventID:               dbTicket.EventID,
+		TicketTypeID:          dbTicket.TicketTypeID,
+		Status:                dbTicket.Status,
+		TicketTypeName:        dbTicket.TicketTypeName,
+		TicketTypeDisplayName: dbTicket.TicketTypeDisplayName,
+		TicketTypePriceCents:  dbTicket.TicketTypePriceCents,
+	}
+}
+
+func ToEnrichedTickets(dbTickets []database.EnrichedTicket) []types.Ticket {
+	tickets := make([]types.Ticket, len(dbTickets))
+	for i, dbTicket := range dbTickets {
+		tickets[i] = ToEnrichedTicket(dbTicket)
 	}
 	return tickets
 }

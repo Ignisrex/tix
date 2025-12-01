@@ -2,7 +2,7 @@
  * Event types matching backend API responses
  */
 
-// Backend Event type (from core/types/types.go)
+
 export interface Event {
   id: string;
   title: string;
@@ -12,7 +12,6 @@ export interface Event {
   created_at: string; // ISO date string
 }
 
-// Enriched search result with venue information (from SearchEventResult)
 export interface SearchEventResult {
   id: string;
   title: string;
@@ -24,18 +23,43 @@ export interface SearchEventResult {
   created_at: string;
 }
 
-// Search results wrapper (if backend returns paginated results)
+
 export interface SearchEventResults {
   results: SearchEventResult[];
   total: number;
 }
 
-// UI display model for search results
+
 export interface SearchResult {
   id: string;
   title: string;
   location: string;
   date?: string;
   price?: number;
+}
+
+
+export type TicketStatus = "available" | "sold";
+
+export interface Ticket {
+  id: string;
+  event_id: string;
+  ticket_type_id: string;
+  status: TicketStatus;
+  ticket_type_name: string;
+  ticket_type_display_name: string;
+  ticket_type_price_cents: number;
+}
+
+export interface TicketType {
+  id: string;
+  name: string;
+  display_name: string;
+  price_cents: number;
+}
+
+export interface TicketWithType extends Ticket {
+  type_name?: string;
+  price_cents?: number;
 }
 

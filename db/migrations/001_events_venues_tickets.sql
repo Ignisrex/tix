@@ -19,14 +19,14 @@ CREATE TABLE ticket_types (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     -- event_id UUID NOT NULL REFERENCES events(id), if we want to allow different ticket types for different events
     name VARCHAR(255) NOT NULL UNIQUE,
-    description TEXT NOT NULL,
+    display_name TEXT NOT NULL,
     price_cents INTEGER NOT NULL
 );
 
 -- seed data for ticket_types
-INSERT INTO ticket_types (name, description, price_cents) VALUES ('vip', 'VIP ticket', 10000);
-INSERT INTO ticket_types (name, description, price_cents) VALUES ('ga', 'General Admission ticket', 1000);
-INSERT INTO ticket_types (name, description, price_cents) VALUES ('front_row', 'Front Row ticket', 5000);
+INSERT INTO ticket_types (name, display_name, price_cents) VALUES ('vip', 'VIP', 10000);
+INSERT INTO ticket_types (name, display_name, price_cents) VALUES ('ga', 'General Admission', 1000);
+INSERT INTO ticket_types (name, display_name, price_cents) VALUES ('front_row', 'Front Row', 5000);
 
 CREATE TYPE ticket_status AS ENUM ('available', 'sold');
 

@@ -11,6 +11,7 @@ export default function Home() {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<SearchResult[]>([]);
   const [loading, setLoading] = useState(false);
+  const [hasSearched, setHasSearched] = useState(false);
 
   function handleFocus() {
     setIsFocused(true);
@@ -20,6 +21,7 @@ export default function Home() {
     setQuery(searchQuery);
     setLoading(true);
     setResults([]);
+    setHasSearched(true);
 
     try {
       const events = await searchEvents(searchQuery);
@@ -77,7 +79,7 @@ export default function Home() {
       </div>
 
       {/* Results area - appears when searching */}
-      {isFocused && (loading || results.length > 0) && (
+      {isFocused && (loading || hasSearched) && (
         <div className="w-full px-4 sm:px-8 mt-8">
           <div className="w-full max-w-7xl mx-auto">
             <SearchResults query={query} results={results} loading={loading} />

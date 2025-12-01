@@ -50,7 +50,7 @@ export function SearchBar({ onFocus, onSearch, query: controlledQuery }: SearchB
 
       <Button
         type="submit"
-        className="ml-2 rounded-full bg-rose-500 hover:bg-rose-600 px-3 h-11 flex items-center gap-2"
+        className="ml-2 rounded-full bg-indigo-500 hover:bg-indigo-600 px-3 h-11 flex items-center gap-2"
       >
         <Search className="h-4 w-4" />
         <span className="hidden sm:inline text-sm font-semibold">Search</span>

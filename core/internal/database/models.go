@@ -55,6 +55,18 @@ func (ns NullTicketStatus) Value() (driver.Value, error) {
 	return string(ns.TicketStatus), nil
 }
 
+type EnrichedTicket struct {
+	ID                    uuid.UUID
+	EventID               uuid.UUID
+	TicketTypeID          uuid.UUID
+	Status                types.TicketStatus
+	CreatedAt             time.Time
+	UpdatedAt             time.Time
+	TicketTypeName        string
+	TicketTypeDisplayName string
+	TicketTypePriceCents  int32
+}
+
 type Event struct {
 	ID          uuid.UUID
 	Title       string
@@ -77,7 +89,7 @@ type Ticket struct {
 type TicketType struct {
 	ID          uuid.UUID
 	Name        string
-	Description string
+	DisplayName string
 	PriceCents  int32
 }
 

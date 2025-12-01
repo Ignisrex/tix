@@ -33,6 +33,9 @@ WORKDIR /app
 # Copy compiled binary from builder
 COPY --from=builder /core /app/core
 
+# Copy seed.json for optional auto-seeding
+COPY --from=builder /app/seed.json /app/seed.json
+
 # Optional non-root user
 RUN adduser -D -g '' appuser
 USER appuser

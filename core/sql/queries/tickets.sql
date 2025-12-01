@@ -7,11 +7,32 @@ SELECT
 RETURNING id, event_id, ticket_type_id, status, created_at, updated_at;
 
 -- name: GetTicketsForEvent :many
-SELECT * FROM tickets
-WHERE event_id = $1;
+SELECT 
+    id,
+    event_id,
+    ticket_type_id,
+    status,
+    created_at,
+    updated_at,
+    ticket_type_name,
+    ticket_type_display_name,
+    ticket_type_price_cents
+FROM enriched_tickets
+WHERE event_id = $1
+ORDER BY ticket_type_id, id;
 
 -- name: GetTicket :one
-SELECT * FROM tickets
+SELECT 
+    id,
+    event_id,
+    ticket_type_id,
+    status,
+    created_at,
+    updated_at,
+    ticket_type_name,
+    ticket_type_display_name,
+    ticket_type_price_cents
+FROM enriched_tickets
 WHERE event_id = $1 AND id = $2;
 
 

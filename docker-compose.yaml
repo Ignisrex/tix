@@ -25,9 +25,11 @@ services:
 
       - SEARCH_SERVICE_URL=http://search:8082
       - BOOKING_SERVICE_URL=http://booking:8081
+
+      - SEED_ON_START=true
     depends_on:
       db:
-        condition: service_started
+        condition: service_healthy
       elasticsearch:
         condition: service_healthy
     networks:
@@ -54,8 +56,10 @@ services:
       - REDIS_HOST=ticket-lock
       - REDIS_PORT=6379
     depends_on:
-      - db
-      - ticket-lock
+      db:
+        condition: service_healthy
+      ticket-lock:
+        condition: service_started
     networks:
       - internal_net
 
@@ -100,6 +104,12 @@ services:
       - db_data:/var/lib/postgresql/data
     networks:
       - internal_net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d tix_db || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 10s
 
   # ======================
   # Goose migration runner
@@ -110,7 +120,8 @@ services:
       dockerfile: Dockerfile
     container_name: migrate
     depends_on:
-      - db
+      db:
+        condition: service_healthy
     environment:
       - GOOSE_DRIVER=postgres
       - GOOSE_DBSTRING=postgres://postgres:password@db:5432/tix_db?sslmode=disable
