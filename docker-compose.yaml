@@ -10,23 +10,31 @@ services:
       dockerfile: Dockerfile
     container_name: core
     ports:
-      - "8080:8080" # exposed to host (API gateway)
+      - "8080:8080"
     environment:
       - PORT=8080
-      # Database connection variables
+
       - DB_USER=postgres
       - DB_PASSWORD=password
       - DB_HOST=db
       - DB_PORT=5432
       - DB_NAME=tix_db
+
+      - ES_HOST=elasticsearch
+      - ES_PORT=9200
+
+      - SEARCH_SERVICE_URL=http://search:8082
     depends_on:
-      - db
+      db:
+        condition: service_started
+      elasticsearch:
+        condition: service_healthy
     networks:
       - public_net
       - internal_net
 
   # ======================
-  # Booking service (internal only)
+  # Booking service
   # ======================
   booking:
     build:
@@ -35,7 +43,7 @@ services:
     container_name: booking
     environment:
       - PORT=8081
-      # Database connection variables (same DB as core)
+
       - DB_USER=postgres
       - DB_PASSWORD=password
       - DB_HOST=db
@@ -43,6 +51,31 @@ services:
       - DB_NAME=tix_db
     depends_on:
       - db
+    networks:
+      - internal_net
+
+  # ======================
+  # Search service
+  # ======================
+  search:
+    build:
+      context: ./search
+      dockerfile: Dockerfile
+    container_name: search
+    environment:
+      - PORT=8082
+
+      - DB_USER=postgres
+      - DB_PASSWORD=password
+      - DB_HOST=db
+      - DB_PORT=5432
+      - DB_NAME=tix_db
+
+      - ES_HOST=elasticsearch
+      - ES_PORT=9200
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
     networks:
       - internal_net
 
@@ -57,7 +90,6 @@ services:
       - POSTGRES_PASSWORD=password
       - POSTGRES_DB=tix_db
     ports:
-      # Optional: expose DB to host (handy for local dev / connecting via GUI)
       - "5532:5432"
     volumes:
       - db_data:/var/lib/postgresql/data
@@ -66,7 +98,6 @@ services:
 
   # ======================
   # Goose migration runner
-  # (uses db/Dockerfile we wrote earlier)
   # ======================
   migrate:
     build:
@@ -81,7 +112,35 @@ services:
     networks:
       - internal_net
     # By default the ENTRYPOINT in db/Dockerfile runs `goose ... up`
-    # so you can just `docker compose run --rm migrate`
+
+  # ======================
+  # Elasticsearch (for event search)
+  # ======================
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.15.0
+    container_name: es
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - bootstrap.memory_lock=true
+    ports:
+      - "9200:9200"
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    volumes:
+      - es_data:/usr/share/elasticsearch/data
+    networks:
+      - internal_net
+    healthcheck:
+      test:
+        ["CMD-SHELL", "curl -f http://localhost:9200/_cluster/health || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 30s
+    # Services can access via http://elasticsearch:9200
 
 # ======================
 # Networks & volumes
@@ -92,3 +151,4 @@ networks:
 
 volumes:
   db_data: {}
+  es_data: {}

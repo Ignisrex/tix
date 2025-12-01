@@ -9,6 +9,8 @@ import (
 	"github.com/go-chi/cors"
 
 	"github.com/ignisrex/tix/core/internal/database"
+	"github.com/ignisrex/tix/core/internal/elasticsearch"
+	"github.com/ignisrex/tix/core/internal/search"
 	"github.com/ignisrex/tix/core/service/events"
 	"github.com/ignisrex/tix/core/service/venues"
 )
@@ -17,18 +19,18 @@ type APIServer struct {
 	addr  string
 	sqlDB *sql.DB
 	q    *database.Queries
-
-	eventHandler *events.Handler
-	venueHandler *venues.Handler
-	
+	esClient *elasticsearch.Client
+	searchClient *search.Client
 }
 
-func NewAPIServer(addr string, sqlDB *sql.DB) *APIServer {
+func NewAPIServer(addr string, sqlDB *sql.DB, esClient *elasticsearch.Client, searchClient *search.Client) *APIServer {
 	queries := database.New(sqlDB)
 	return &APIServer{
 		addr:  addr,
 		sqlDB: sqlDB,
 		q:    queries,
+		esClient: esClient,
+		searchClient: searchClient,
 	}
 }
 
@@ -54,7 +56,7 @@ func (s *APIServer) Run() error {
 	v1 := chi.NewRouter()
 	v1.Get("/healthz", nil)
 
-	eventHandler := events.NewHandler(s.q, s.sqlDB)
+	eventHandler := events.NewHandler(s.q, s.sqlDB, s.esClient, s.searchClient)
 	eventHandler.RegisterRoutes(v1)
 
 	venueHandler := venues.NewHandler(s.q)

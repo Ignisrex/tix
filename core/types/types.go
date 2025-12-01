@@ -20,6 +20,7 @@ type Event struct {
 	Description string    `json:"description" validate:"required"`
 	StartDate   time.Time `json:"start_date"`
 	VenueID     uuid.UUID `json:"venue_id" validate:"required"`
+	CreatedAt   time.Time `json:"created_at"`
 }
 
 type Venue struct {
@@ -66,3 +67,18 @@ type UpdateVenueRequest struct {
 	Location string    `json:"location" validate:"required"`
 	SeatMap  json.RawMessage `json:"seat_map" validate:"required"`
 }	
+type SearchEventResult struct {
+	ID             string    `json:"id"`
+	Title          string    `json:"title"`
+	Description    string    `json:"description"`
+	StartDate      time.Time `json:"start_date"`
+	VenueID        string    `json:"venue_id"`
+	VenueName      string    `json:"venue_name"`
+	VenueLocation  string    `json:"venue_location"`
+	CreatedAt      time.Time `json:"created_at"`
+}
+
+type SearchEventResults struct {
+	Results []SearchEventResult `json:"results"`
+	Total   int                 `json:"total"`
+}

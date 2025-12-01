@@ -12,6 +12,7 @@ func ToEvent(dbEvent database.Event) types.Event {
 		Description: dbEvent.Description,
 		StartDate: dbEvent.StartDate,
 		VenueID: dbEvent.VenueID,
+		CreatedAt: dbEvent.CreatedAt,
 	}
 }
 

@@ -7,24 +7,23 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
+	"github.com/ignisrex/tix/search/internal/elasticsearch"
 
-	"github.com/ignisrex/tix/booking/internal/config"
-	"github.com/ignisrex/tix/booking/internal/database"
-	"github.com/ignisrex/tix/booking/service/booking"
+	"github.com/ignisrex/tix/search/internal/config"
+	"github.com/ignisrex/tix/search/service/events"
 )
 
 type APIServer struct {
 	addr    string
 	db *sql.DB
-	queries *database.Queries
+	esClient *elasticsearch.Client
 }
 
-func NewAPIServer(addr string, db *sql.DB) *APIServer {
-	queries := database.New(db)
+func NewAPIServer(addr string, db *sql.DB, esClient *elasticsearch.Client) *APIServer {
 	return &APIServer{
 		addr:    addr,
 		db: db,
-		queries: queries,
+		esClient: esClient,
 	}
 }
 
@@ -43,17 +42,21 @@ func (s *APIServer) Run() error {
 	r.Use(middleware.Logger)
 
 	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte("booking service"))
+		w.Write([]byte("search service"))
 	})
 
-	// booking endpoints under /api/v1
+	// search endpoints under /api/v1
 	v1 := chi.NewRouter()
+	v1.Get("/healthz", nil)
+	
+	eventsHandler := events.NewHandler(s.esClient)
+	eventsHandler.RegisterRoutes(v1)
+	
 	r.Mount("/api/v1", v1)
 
 	return http.ListenAndServe(s.addr, r)
 }
 
-// AddrFromConfig builds the listen address from env config.
 func AddrFromConfig() string {
 	port := config.Envs.Port
 	if port == "" {

@@ -14,6 +14,9 @@ type Config struct {
 	DBHost     string
 	DBPort     string
 	DBName     string
+
+	ESHost string
+	ESPort string
 }
 
 var Envs Config = initConfig()
@@ -28,11 +31,17 @@ func initConfig() Config {
 		DBHost:    getEnv("DB_HOST", "localhost"),
 		DBPort:    getEnv("DB_PORT", "5432"),
 		DBName:    getEnv("DB_NAME", "tix_db"),
+		ESHost:    getEnv("ES_HOST", "localhost"),
+		ESPort:    getEnv("ES_PORT", "9200"),
 	}
 }
 
 func (c Config) DBURL() string {
 	return "postgres://" + c.DBUser + ":" + c.DBPassword + "@" + c.DBHost + ":" + c.DBPort + "/" + c.DBName + "?sslmode=disable"
+}
+
+func (c Config) ESAddresses() []string {
+	return []string{"http://" + c.ESHost + ":" + c.ESPort}
 }
 
 func getEnv(key, fallback string) string {

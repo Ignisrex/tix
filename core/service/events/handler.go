@@ -1,17 +1,21 @@
 package events
 
 import (
+	"database/sql"
 	"fmt"
 	"net/http"
-	"database/sql"
+	"strconv"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 
 	"github.com/ignisrex/tix/core/internal/database"
+	"github.com/ignisrex/tix/core/internal/elasticsearch"
+	"github.com/ignisrex/tix/core/internal/search"
 	"github.com/ignisrex/tix/core/internal/utils"
-	"github.com/ignisrex/tix/core/types"
 	"github.com/ignisrex/tix/core/service/tickets"
+	"github.com/ignisrex/tix/core/service/venues"
+	"github.com/ignisrex/tix/core/types"
 )
 
 type Handler struct {
@@ -19,12 +23,15 @@ type Handler struct {
 	ticketService *tickets.Service
 }
 
-func NewHandler(queries *database.Queries, db *sql.DB) *Handler {
+func NewHandler(queries *database.Queries, db *sql.DB, esClient *elasticsearch.Client, searchClient *search.Client) *Handler {
 	ticketRepo := tickets.NewRepo(queries)
 	ticketService := tickets.NewService(ticketRepo)
 
+	venueRepo := venues.NewRepo(queries)
+	venueService := venues.NewService(venueRepo)
+
 	eventRepo := NewRepo(queries, db)
-	eventService := NewService(eventRepo, ticketService)
+	eventService := NewService(eventRepo, ticketService, venueService, esClient, searchClient)
 	
 	return &Handler{
 		eventService: eventService,
@@ -47,7 +54,23 @@ func (h *Handler) RegisterRoutes(r chi.Router) {
 }
 
 func (h *Handler) GetEvents(w http.ResponseWriter, r *http.Request) {
-	events, err := h.eventService.GetEvents(r.Context())
+	
+	query := r.URL.Query().Get("q")
+	limit := 10
+	if limitStr := r.URL.Query().Get("limit"); limitStr != "" {
+		if l, err := strconv.Atoi(limitStr); err == nil && l > 0 && l <= 100 {
+			limit = l
+		}
+	}
+	
+	offset := 0
+	if offsetStr := r.URL.Query().Get("offset"); offsetStr != "" {
+		if o, err := strconv.Atoi(offsetStr); err == nil && o >= 0 {
+			offset = o
+		}
+	}
+	
+	events, err := h.eventService.GetEventsWithQuery(r.Context(), query, limit, offset)
 	if err != nil {
 		utils.WriteError(w, http.StatusInternalServerError, fmt.Errorf("failed to get events: %w", err))
 		return
