@@ -5,6 +5,8 @@ import { SearchBar } from "@/components/search-bar";
 import { SearchResults } from "@/components/search-results";
 import { searchEvents } from "@/lib/api";
 import type { SearchEventResult, SearchResult } from "@/types/events";
+import Lottie from "lottie-react";
+import ticketsAnimation from "@/assets/animations/ticket.json";
 
 export default function Home() {
   const [isFocused, setIsFocused] = useState(false);
@@ -12,6 +14,7 @@ export default function Home() {
   const [results, setResults] = useState<SearchResult[]>([]);
   const [loading, setLoading] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
+  const [showAnimation, setShowAnimation] = useState(true);
 
   function handleFocus() {
     setIsFocused(true);
@@ -22,6 +25,7 @@ export default function Home() {
     setLoading(true);
     setResults([]);
     setHasSearched(true);
+    setShowAnimation(false);
 
     try {
       const events = await searchEvents(searchQuery);
@@ -73,11 +77,26 @@ export default function Home() {
           </div>
         </div>
       </div>
+      {/* animation just below search bar */}
+      {showAnimation && (
+        <div className="flex justify-center mt-4 transition-opacity duration-500 opacity-100">
+          <Lottie
+            animationData={ticketsAnimation}
+            loop
+            autoplay
+            style={{ width: 300, height: 300 }}
+          />
+        </div>
+      )}
 
       {/* Results area - appears when searching */}
       {isFocused && (loading || hasSearched) && (
         <div className="w-full px-4 sm:px-8 mt-8">
-          <div className="w-full max-w-7xl mx-auto">
+          <div
+            className={`w-full max-w-7xl mx-auto transition-all duration-500 ease-out ${
+              loading ? "opacity-0 translate-y-2" : "opacity-100 translate-y-0"
+            }`}
+          >
             <SearchResults query={query} results={results} loading={loading} />
           </div>
         </div>
