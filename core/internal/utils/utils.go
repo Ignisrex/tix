@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"log"
 
 	"github.com/go-playground/validator/v10"
 )
@@ -16,6 +17,12 @@ var Validate = validator.New()
 
 //ParseJSON expects a pointer to a struct and decodes the JSON body of the request into it.
 func ParseJSON(r *http.Request, payload any) error {
+
+	if err := Validate.Struct(payload); err != nil {
+		log.Printf("invalid request body: %v", err)
+		return errors.New("invalid request body")
+	}
+
 	if r.Body == nil {
 		return errors.New("request body is empty")
 	}

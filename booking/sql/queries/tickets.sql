@@ -1,4 +1,4 @@
--- name: GetTicketWithPrice :one
+-- name: GetTicketsWithPrice :many
 SELECT 
     t.id,
     t.event_id,
@@ -7,15 +7,7 @@ SELECT
     tt.price_cents
 FROM tickets t
 JOIN ticket_types tt ON t.ticket_type_id = tt.id
-WHERE t.id = $1;
-
--- name: GetTicketStatus :one
-SELECT status FROM tickets WHERE id = $1;
-
--- name: PurchaseTicket :exec
-UPDATE tickets
-SET status = 'sold'
-WHERE id = $1 AND status = 'available';
+WHERE t.id = ANY($1::uuid[]);
 
 -- This query creates a purchase record and updates all tickets atomically
 -- name: PurchaseTickets :one

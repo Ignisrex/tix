@@ -1,6 +1,7 @@
 package booking
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 
@@ -36,7 +37,7 @@ func (h *Handler) RegisterRoutes(r chi.Router) {
 
 func (h *Handler) handleReserve(w http.ResponseWriter, r *http.Request) {
 	var req types.ReserveRequest
-	if err := utils.DecodeJSON(r, &req); err != nil {
+	if err := utils.ParseJSON(r, &req); err != nil {
 		utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("invalid request body: %w", err))
 		return
 	}
@@ -46,23 +47,43 @@ func (h *Handler) handleReserve(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	response, statusCode, err := h.service.ReserveTickets(r.Context(), req.TicketIDs)
+	reservedIDs, err := h.service.ReserveTickets(r.Context(), req.TicketIDs)
 	if err != nil {
-		// If response exists but success is false, it's an "already reserved" error
-		if response != nil && !response.Success {
-			utils.WriteJSON(w, statusCode, response)
-			return
+		status := http.StatusInternalServerError
+		message := "failed to reserve tickets"
+
+		switch {
+		case errors.Is(err, ErrTicketNotFound):
+			status = http.StatusNotFound
+			message = "one or more tickets not found"
+		case errors.Is(err, ErrTicketSold):
+			status = http.StatusGone
+			message = err.Error()
+		case errors.Is(err, ErrTicketReserved):
+			status = http.StatusConflict
+			message = err.Error()
 		}
-		utils.WriteError(w, statusCode, fmt.Errorf("failed to reserve: %w", err))
+
+		response := types.ReserveResponse{
+			Success:   false,
+			Message:   message,
+			TicketIDs: []uuid.UUID{},
+		}
+		utils.WriteJSON(w, status, response)
 		return
 	}
 
-	utils.WriteJSON(w, statusCode, response)
+	resp := types.ReserveResponse{
+		Success:   true,
+		Message:   "tickets reserved successfully",
+		TicketIDs: reservedIDs,
+	}
+	utils.WriteJSON(w, http.StatusOK, resp)
 }
 
 func (h *Handler) handlePurchase(w http.ResponseWriter, r *http.Request) {
 	var req types.PurchaseRequest
-	if err := utils.DecodeJSON(r, &req); err != nil {
+	if err := utils.ParseJSON(r, &req); err != nil {
 		utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("invalid request body: %w", err))
 		return
 	}
@@ -72,18 +93,42 @@ func (h *Handler) handlePurchase(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	response, statusCode, err := h.service.PurchaseTickets(r.Context(), req.TicketIDs)
+	purchaseID, totalCents, err := h.service.PurchaseTickets(r.Context(), req.TicketIDs)
 	if err != nil {
-		// If response exists but success is false, it's a payment failure or not found
-		if response != nil && !response.Success {
-			utils.WriteJSON(w, statusCode, response)
-			return
+		status := http.StatusInternalServerError
+		message := "failed to purchase tickets"
+
+		switch {
+		case errors.Is(err, ErrTicketNotFound):
+			status = http.StatusNotFound
+			message = "one or more tickets not found"
+		case errors.Is(err, ErrTicketReserved):
+			status = http.StatusConflict
+			message = "one or more tickets are not reserved"
+		case errors.Is(err, ErrPaymentFailed):
+			status = http.StatusPaymentRequired
+			message = err.Error()
 		}
-		utils.WriteError(w, statusCode, fmt.Errorf("failed to purchase: %w", err))
+
+		response := types.PurchaseResponse{
+			Success:    false,
+			Message:    message,
+			TicketIDs:  []uuid.UUID{},
+			Total:      0,
+			PurchaseID: uuid.Nil,
+		}
+		utils.WriteJSON(w, status, response)
 		return
 	}
 
-	utils.WriteJSON(w, statusCode, response)
+	response := types.PurchaseResponse{
+		Success:    true,
+		Message:    "purchase completed successfully",
+		TicketIDs:  req.TicketIDs,
+		Total:      totalCents,
+		PurchaseID: purchaseID,
+	}
+	utils.WriteJSON(w, http.StatusOK, response)
 }
 
 func (h *Handler) handleGetPurchase(w http.ResponseWriter, r *http.Request) {
@@ -94,18 +139,22 @@ func (h *Handler) handleGetPurchase(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	response, statusCode, err := h.service.GetPurchaseDetails(r.Context(), id)
+	response, err := h.service.GetPurchaseDetails(r.Context(), id)
 	if err != nil {
-		utils.WriteError(w, statusCode, fmt.Errorf("failed to get purchase details: %w", err))
+		status := http.StatusInternalServerError
+		if errors.Is(err, ErrPurchaseNotFound) {
+			status = http.StatusNotFound
+		}
+		utils.WriteError(w, status, fmt.Errorf("failed to get purchase details: %w", err))
 		return
 	}
 
-	utils.WriteJSON(w, statusCode, response)
+	utils.WriteJSON(w, http.StatusOK, response)
 }
 
 func (h *Handler) handleCheckLocks(w http.ResponseWriter, r *http.Request) {
 	var req types.CheckLocksRequest
-	if err := utils.DecodeJSON(r, &req); err != nil {
+	if err := utils.ParseJSON(r, &req); err != nil {
 		utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("invalid request body: %w", err))
 		return
 	}

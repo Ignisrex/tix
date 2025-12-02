@@ -51,3 +51,11 @@ type CheckLocksResponse struct {
 	Locks map[string]bool `json:"locks"` // ticket_id (string) -> is_reserved (bool)
 }
 
+type Ticket struct {
+	ID uuid.UUID `json:"id"`
+	EventID uuid.UUID `json:"event_id"`
+	TicketTypeID uuid.UUID `json:"ticket_type_id"`
+	Status string `json:"status"`
+	PriceCents int32 `json:"price_cents"`
+}
+

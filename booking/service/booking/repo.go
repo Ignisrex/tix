@@ -6,6 +6,8 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/ignisrex/tix/booking/internal/database"
+	"github.com/ignisrex/tix/booking/types"
+	"github.com/ignisrex/tix/booking/mappers"
 )
 
 type Repo struct {
@@ -16,16 +18,12 @@ func NewRepo(queries *database.Queries) *Repo {
 	return &Repo{queries: queries}
 }
 
-func (r *Repo) GetTicketStatus(ctx context.Context, ticketID uuid.UUID) (database.TicketStatus, error) {
-	return r.queries.GetTicketStatus(ctx, ticketID)
-}
-
-func (r *Repo) GetTicketWithPrice(ctx context.Context, ticketID uuid.UUID) (database.GetTicketWithPriceRow, error) {
-	return r.queries.GetTicketWithPrice(ctx, ticketID)
-}
-
-func (r *Repo) PurchaseTicket(ctx context.Context, ticketID uuid.UUID) error {
-	return r.queries.PurchaseTicket(ctx, ticketID)
+func (r *Repo) GetTicketsWithPrice(ctx context.Context, ticketID []uuid.UUID) ([]types.Ticket, error) {
+	dbTickets, err := r.queries.GetTicketsWithPrice(ctx, ticketID)
+	if err != nil {
+		return nil, err
+	}
+	return mappers.ToTickets(dbTickets), nil
 }
 
 func (r *Repo) PurchaseTickets(ctx context.Context, ticketIDs []uuid.UUID, totalCents int32) (uuid.UUID, error) {

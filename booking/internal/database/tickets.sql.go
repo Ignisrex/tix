@@ -57,18 +57,7 @@ func (q *Queries) GetPurchaseDetails(ctx context.Context, id uuid.UUID) (GetPurc
 	return i, err
 }
 
-const getTicketStatus = `-- name: GetTicketStatus :one
-SELECT status FROM tickets WHERE id = $1
-`
-
-func (q *Queries) GetTicketStatus(ctx context.Context, id uuid.UUID) (TicketStatus, error) {
-	row := q.db.QueryRowContext(ctx, getTicketStatus, id)
-	var status TicketStatus
-	err := row.Scan(&status)
-	return status, err
-}
-
-const getTicketWithPrice = `-- name: GetTicketWithPrice :one
+const getTicketsWithPrice = `-- name: GetTicketsWithPrice :many
 SELECT 
     t.id,
     t.event_id,
@@ -77,10 +66,10 @@ SELECT
     tt.price_cents
 FROM tickets t
 JOIN ticket_types tt ON t.ticket_type_id = tt.id
-WHERE t.id = $1
+WHERE t.id = ANY($1::uuid[])
 `
 
-type GetTicketWithPriceRow struct {
+type GetTicketsWithPriceRow struct {
 	ID           uuid.UUID
 	EventID      uuid.UUID
 	TicketTypeID uuid.UUID
@@ -88,28 +77,33 @@ type GetTicketWithPriceRow struct {
 	PriceCents   int32
 }
 
-func (q *Queries) GetTicketWithPrice(ctx context.Context, id uuid.UUID) (GetTicketWithPriceRow, error) {
-	row := q.db.QueryRowContext(ctx, getTicketWithPrice, id)
-	var i GetTicketWithPriceRow
-	err := row.Scan(
-		&i.ID,
-		&i.EventID,
-		&i.TicketTypeID,
-		&i.Status,
-		&i.PriceCents,
-	)
-	return i, err
-}
-
-const purchaseTicket = `-- name: PurchaseTicket :exec
-UPDATE tickets
-SET status = 'sold'
-WHERE id = $1 AND status = 'available'
-`
-
-func (q *Queries) PurchaseTicket(ctx context.Context, id uuid.UUID) error {
-	_, err := q.db.ExecContext(ctx, purchaseTicket, id)
-	return err
+func (q *Queries) GetTicketsWithPrice(ctx context.Context, dollar_1 []uuid.UUID) ([]GetTicketsWithPriceRow, error) {
+	rows, err := q.db.QueryContext(ctx, getTicketsWithPrice, pq.Array(dollar_1))
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetTicketsWithPriceRow
+	for rows.Next() {
+		var i GetTicketsWithPriceRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.EventID,
+			&i.TicketTypeID,
+			&i.Status,
+			&i.PriceCents,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const purchaseTickets = `-- name: PurchaseTickets :one

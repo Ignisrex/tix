@@ -3,15 +3,24 @@ package utils
 import (
 	"encoding/json"
 	"net/http"
+	"errors"
+	"log"
+
+	"github.com/go-playground/validator/v10"
 )
 
-func ParseJSON(r *http.Request, v any) error {
-	defer r.Body.Close()
-	return json.NewDecoder(r.Body).Decode(v)
-}
+var Validate = validator.New()
 
-func DecodeJSON(r *http.Request, v any) error {
-	return ParseJSON(r, v)
+func ParseJSON(r *http.Request, v any) error {
+	if err := Validate.Struct(v); err != nil {
+		log.Printf("invalid request body: %v", err)
+		return errors.New("invalid request body")
+	}
+
+	if r.Body == nil {
+		return errors.New("request body is empty")
+	}
+	return json.NewDecoder(r.Body).Decode(v)
 }
 
 func WriteJSON(w http.ResponseWriter, status int, v any) {

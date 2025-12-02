@@ -48,14 +48,14 @@ func (h *Handler) ReserveTickets(w http.ResponseWriter, r *http.Request) {
 	response, statusCode, err := h.service.ReserveTickets(r.Context(), req.TicketIDs)
 	if err != nil {
 		if response != nil && !response.Success {
-			_ = utils.WriteJSON(w, statusCode, response)
+			utils.WriteJSON(w, statusCode, response)
 			return
 		}
 		utils.WriteError(w, statusCode, fmt.Errorf("failed to reserve tickets: %w", err))
 		return
 	}
 
-	_ = utils.WriteJSON(w, statusCode, response)
+	utils.WriteJSON(w, statusCode, response)
 }
 
 func (h *Handler) PurchaseTickets(w http.ResponseWriter, r *http.Request) {
@@ -76,7 +76,7 @@ func (h *Handler) PurchaseTickets(w http.ResponseWriter, r *http.Request) {
 	response, statusCode, err := h.service.PurchaseTickets(r.Context(), req.TicketIDs)
 	if err != nil {
 		if response != nil && !response.Success {
-			_ = utils.WriteJSON(w, statusCode, response)
+			utils.WriteJSON(w, statusCode, response)
 			return
 		}
 		utils.WriteError(w, statusCode, fmt.Errorf("failed to purchase tickets: %w", err))

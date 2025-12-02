@@ -2,6 +2,7 @@ package redis
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"time"
@@ -18,6 +19,18 @@ type Client struct {
 	rdb *redis.Client
 	ttl time.Duration
 }
+
+var reserveScript = redis.NewScript(`
+for i = 1, #KEYS do
+  if redis.call("EXISTS", KEYS[i]) == 1 then
+    return 0
+  end
+end
+for i = 1, #KEYS do
+  redis.call("SET", KEYS[i], "true", "EX", ARGV[1], "NX")
+end
+return 1
+`)
 
 func NewClient(addr string, ttlSeconds int) (*Client, error) {
 	rdb := redis.NewClient(&redis.Options{
@@ -47,76 +60,55 @@ func (c *Client) IsReserved(ctx context.Context, ticketID uuid.UUID) (bool, erro
 	return exists > 0, nil
 }
 
-func (c *Client) ReserveTicket(ctx context.Context, ticketID uuid.UUID) (bool, error) {
-	key := keyPrefix + ticketID.String()
-	
-	// Use SETNX for atomic reservation (only set if not exists)
-	set, err := c.rdb.SetNX(ctx, key, "true", c.ttl).Result()
-	if err != nil {
-		return false, fmt.Errorf("failed to reserve ticket: %w", err)
+/*ReserveTickets attempts to reserve multiple tickets atomically during the operation*/
+func (c *Client) ReserveTickets(ctx context.Context, ticketIDs []uuid.UUID) error {
+	keys := make([]string, len(ticketIDs))
+	for i, id := range ticketIDs {
+		keys[i] = keyPrefix + id.String()
 	}
-	
-	return set, nil // Returns true if key was set (not already reserved), false if already exists
-}
 
-func (c *Client) ReleaseTicket(ctx context.Context, ticketID uuid.UUID) error {
-	key := keyPrefix + ticketID.String()
-	if err := c.rdb.Del(ctx, key).Err(); err != nil {
-		return fmt.Errorf("failed to release ticket: %w", err)
+	res, err := reserveScript.Run(ctx, c.rdb, keys, int(c.ttl.Seconds())).Int()
+	if err != nil {
+		return fmt.Errorf("failed to reserve tickets: %w", err)
 	}
+
+	if res == 0 {
+		return errors.New("failed to reserve tickets. At least one ticket is already reserved")
+	}
+
 	return nil
 }
 
-// ReserveTickets attempts to reserve multiple tickets atomically.
-// Returns a map of ticketID -> success (true if reserved, false if already reserved)
-// and any error that occurred during the operation.
-func (c *Client) ReserveTickets(ctx context.Context, ticketIDs []uuid.UUID) (map[uuid.UUID]bool, error) {
-	if len(ticketIDs) == 0 {
-		return make(map[uuid.UUID]bool), nil
-	}
-
-	results := make(map[uuid.UUID]bool)
+func (c *Client) RefreshTickets(ctx context.Context, ticketIDs []uuid.UUID, ttl time.Duration) (bool, error) {
 	pipe := c.rdb.Pipeline()
-
-	// Prepare all SETNX operations
-	ops := make(map[string]uuid.UUID)
 	for _, ticketID := range ticketIDs {
 		key := keyPrefix + ticketID.String()
-		ops[key] = ticketID
-		pipe.SetNX(ctx, key, "true", c.ttl)
+		pipe.Expire(ctx, key, ttl)
 	}
 
-	// Execute all operations atomically
 	cmds, err := pipe.Exec(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("failed to reserve tickets: %w", err)
+		return false, fmt.Errorf("failed to refresh tickets: %w", err)
 	}
 
-	// Process results
-	i := 0
-	for _, ticketID := range ticketIDs {
-		if i < len(cmds) {
-			setCmd, ok := cmds[i].(*redis.BoolCmd)
-			if ok {
-				results[ticketID] = setCmd.Val()
-			} else {
-				results[ticketID] = false
-			}
-		} else {
-			results[ticketID] = false
+	for _, cmd := range cmds {
+		if cmd.Err() != nil {
+			return false, fmt.Errorf("failed to refresh ticket: %w", cmd.Err())
 		}
-		i++
-	}
 
-	return results, nil
+		expireCmd, ok := cmd.(*redis.BoolCmd)
+		if !ok {
+			return false, fmt.Errorf("failed to refresh ticket: %w", cmd.Err())
+		}
+
+		if !expireCmd.Val() {
+			return false, fmt.Errorf("failed to refresh ticket: %w", expireCmd.Err())
+		}
+	}
+	return true, nil
 }
 
-// ReleaseTickets releases multiple tickets.
 func (c *Client) ReleaseTickets(ctx context.Context, ticketIDs []uuid.UUID) error {
-	if len(ticketIDs) == 0 {
-		return nil
-	}
-
 	pipe := c.rdb.Pipeline()
 	for _, ticketID := range ticketIDs {
 		key := keyPrefix + ticketID.String()
@@ -130,21 +122,13 @@ func (c *Client) ReleaseTickets(ctx context.Context, ticketIDs []uuid.UUID) erro
 	return nil
 }
 
-// AreReserved checks if multiple tickets are reserved.
+
 // Returns a map of ticketID -> is_reserved (true if reserved, false if available).
 func (c *Client) AreReserved(ctx context.Context, ticketIDs []uuid.UUID) (map[uuid.UUID]bool, error) {
-	if len(ticketIDs) == 0 {
-		return make(map[uuid.UUID]bool), nil
-	}
-
 	results := make(map[uuid.UUID]bool)
 	pipe := c.rdb.Pipeline()
-
-	// Prepare all EXISTS operations
-	ops := make(map[string]uuid.UUID)
 	for _, ticketID := range ticketIDs {
 		key := keyPrefix + ticketID.String()
-		ops[key] = ticketID
 		pipe.Exists(ctx, key)
 	}
 
@@ -156,16 +140,15 @@ func (c *Client) AreReserved(ctx context.Context, ticketIDs []uuid.UUID) (map[uu
 
 	// Process results
 	for i, ticketID := range ticketIDs {
-		if i < len(cmds) {
-			existsCmd, ok := cmds[i].(*redis.IntCmd)
-			if ok {
-				results[ticketID] = existsCmd.Val() > 0
-			} else {
-				results[ticketID] = false
-			}
-		} else {
-			results[ticketID] = false
+		existsCmd, ok := cmds[i].(*redis.IntCmd)
+		if !ok {
+			return nil, fmt.Errorf("failed to check reservation: %w", cmds[i].Err())
 		}
+		if existsCmd.Val() > 0 {
+			results[ticketID] = true
+			continue
+		}
+		results[ticketID] = false
 	}
 
 	return results, nil
