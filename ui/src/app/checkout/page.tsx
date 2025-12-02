@@ -3,21 +3,14 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getEvent, getEventTickets, purchaseTickets } from "@/lib/api";
+import { getValidReservation, clearReservation } from "@/lib/reservation-storage";
 import type { Event, Ticket } from "@/types/events";
-import type { ReservationData } from "@/types/booking";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { formatPrice } from "@/lib/utils";
-
-const RESERVATION_TTL_SECONDS = parseInt(
-  process.env.NEXT_PUBLIC_RESERVATION_TTL_SECONDS || "180",
-  10
-);
-// Be pessimistic on the client: assume reservations expire 3 seconds earlier
-const PESSIMISTIC_TTL_SECONDS = Math.max(RESERVATION_TTL_SECONDS - 3, 0);
 
 export default function CheckoutPage() {
   const router = useRouter();
@@ -31,70 +24,45 @@ export default function CheckoutPage() {
 
   useEffect(() => {
     async function validateAndFetch() {
-      const reservationStr = localStorage.getItem("tix_reservation");
-      if (!reservationStr) {
+      const reservation = getValidReservation();
+      
+      if (!reservation) {
         setReservationValid(false);
         setLoading(false);
         return;
       }
 
+      setReservationValid(true);
+
+      // Fetch event and tickets
       try {
-        const reservation: ReservationData = JSON.parse(reservationStr);
+        setLoading(true);
+        const eventId = reservation.eventId;
+
+        const [eventData, ticketsData] = await Promise.all([
+          getEvent(eventId),
+          getEventTickets(eventId),
+        ]);
+
+        setEvent(eventData);
         
-        if (!reservation.ticketIds || reservation.ticketIds.length === 0) {
-          setReservationValid(false);
+        // Find all reserved tickets
+        // TODO: Store ticket data in a store and pass it to the checkout page instead of fetching it
+        //    -> introducing zustand for this would be a good idea
+        const foundTickets = ticketsData.filter((t) => 
+          reservation.ticketIds.includes(t.id)
+        );
+        
+        if (foundTickets.length !== reservation.ticketIds.length) {
+          setError("Some tickets were not found");
           setLoading(false);
           return;
         }
 
-        const now = Date.now();
-        const elapsed = Math.floor((now - reservation.reservedAt) / 1000);
-        const remaining = PESSIMISTIC_TTL_SECONDS - elapsed;
-
-        if (remaining <= 0) {
-          localStorage.removeItem("tix_reservation");
-          setReservationValid(false);
-          setLoading(false);
-          return;
-        }
-
-        setReservationValid(true);
-
-        // Fetch event and tickets
-        try {
-          setLoading(true);
-          const eventId = reservation.eventId;
-
-          const [eventData, ticketsData] = await Promise.all([
-            getEvent(eventId),
-            getEventTickets(eventId),
-          ]);
-
-          setEvent(eventData);
-          
-          // Find all reserved tickets
-          // TODO: Store ticket data in a store and pass it to the checkout page instead of fetching it
-          //    -> introducing zustand for this would be a good idea
-          const foundTickets = ticketsData.filter((t) => 
-            reservation.ticketIds.includes(t.id)
-          );
-          
-          if (foundTickets.length !== reservation.ticketIds.length) {
-            setError("Some tickets were not found");
-            setLoading(false);
-            return;
-          }
-
-          setTickets(foundTickets);
-        } catch (err) {
-          setError(err instanceof Error ? err.message : "Failed to load ticket details");
-        } finally {
-          setLoading(false);
-        }
+        setTickets(foundTickets);
       } catch (err) {
-        console.error("Error validating reservation:", err);
-        localStorage.removeItem("tix_reservation");
-        setReservationValid(false);
+        setError(err instanceof Error ? err.message : "Failed to load ticket details");
+      } finally {
         setLoading(false);
       }
     }
@@ -105,14 +73,13 @@ export default function CheckoutPage() {
   const handlePurchase = async () => {
     if (tickets.length === 0) return;
 
-    const reservationStr = localStorage.getItem("tix_reservation");
-    if (!reservationStr) {
+    const reservation = getValidReservation();
+    if (!reservation) {
       alert("Reservation not found");
       return;
     }
 
     try {
-      const reservation: ReservationData = JSON.parse(reservationStr);
       const ticketIds = reservation.ticketIds;
 
       setPurchasing(true);
@@ -120,7 +87,7 @@ export default function CheckoutPage() {
       
       if (response.success && response.purchase_id) {
         // Clear reservation
-        localStorage.removeItem("tix_reservation");
+        clearReservation();
         
         // Redirect to success page with purchase ID
         router.push(`/purchases/${response.purchase_id}`);

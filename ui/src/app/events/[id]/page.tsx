@@ -2,10 +2,10 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { getEvent, reserveTickets } from "@/lib/api";
+import { getEvent } from "@/lib/api";
 import { useTicketStream } from "@/hooks/use-ticket-stream";
+import { useReservation } from "@/hooks/use-reservation";
 import type { Event, Ticket } from "@/types/events";
-import type { ReservationData } from "@/types/booking";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -28,6 +28,9 @@ export default function EventDetailPage() {
 
   // Use SSE hook for real-time ticket updates
   const { tickets, error: streamError } = useTicketStream(eventId);
+  
+  // Use reservation hook
+  const { reserveTicketsForEvent } = useReservation();
 
   useEffect(() => {
     async function fetchEvent() {
@@ -124,78 +127,20 @@ export default function EventDetailPage() {
             }
 
             setIsReserving(true);
-            try {
-              // Check for existing reservation
-              const existingReservationStr = localStorage.getItem("tix_reservation");
-              let existingTicketIds: string[] = [];
-              
-              if (existingReservationStr) {
-                try {
-                  const existingReservation: ReservationData = JSON.parse(existingReservationStr);
-                  
-                  // Check if existing reservation is for the same event
-                  if (existingReservation.eventId === eventId) {
-                    // Get existing ticket IDs
-                    existingTicketIds = existingReservation.ticketIds || [];
-                  } else {
-                    // Different event - user should clear existing reservation first
-                    alert("You already have tickets reserved for a different event. Please complete or cancel that reservation first.");
-                    setIsReserving(false);
-                    return;
-                  }
-                } catch (err) {
-                  // Invalid existing reservation, ignore it
-                  console.error("Error parsing existing reservation:", err);
-                }
-              }
+            const ticketIds = selectedTickets.map((t) => t.id);
 
-              // Get new ticket IDs (only tickets that aren't already reserved)
-              const newTicketIds = selectedTickets.map((t) => t.id);
-              const ticketsToReserve = newTicketIds.filter((id) => !existingTicketIds.includes(id));
-
-              // If all tickets are already reserved, just update localStorage and go to checkout
-              if (ticketsToReserve.length === 0) {
-                // All tickets already reserved, just update the reservation data
-                const reservationData: ReservationData = {
-                  ticketIds: [...new Set([...existingTicketIds, ...newTicketIds])],
-                  eventId: eventId,
-                  reservedAt: Date.now(),
-                };
-                localStorage.setItem("tix_reservation", JSON.stringify(reservationData));
+            await reserveTicketsForEvent(ticketIds, eventId, {
+              mergeWithExisting: true,
+              onSuccess: () => {
                 router.push("/checkout");
                 setIsReserving(false);
-                return;
-              }
-
-              // Reserve only the new tickets
-              const response = await reserveTickets(ticketsToReserve);
-
-              if (response.success) {
-                // Merge existing and newly reserved tickets
-                const allReservedTicketIds = [...new Set([...existingTicketIds, ...response.ticket_ids])];
-                
-                // Store merged reservation in localStorage
-                const reservationData: ReservationData = {
-                  ticketIds: allReservedTicketIds,
-                  eventId: eventId,
-                  reservedAt: Date.now(),
-                };
-                localStorage.setItem("tix_reservation", JSON.stringify(reservationData));
-
-                // Route to checkout
-                router.push("/checkout");
-              } else {
-                // Show alert for failure and redirect back
-                alert(response.message || "One or more seats are not available");
+              },
+              onError: (errorMsg) => {
+                alert(errorMsg);
                 router.push(`/events/${eventId}`);
-              }
-            } catch (err) {
-              const errorMessage = err instanceof Error ? err.message : "Failed to reserve tickets";
-              alert(errorMessage || "One or more seats are not available");
-              router.push(`/events/${eventId}`);
-            } finally {
-              setIsReserving(false);
-            }
+                setIsReserving(false);
+              },
+            });
           }}
           isReserving={isReserving}
         />

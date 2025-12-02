@@ -1,68 +1,17 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Clock } from "lucide-react";
-import type { ReservationData } from "@/types/booking";
-
-const RESERVATION_TTL_SECONDS = parseInt(
-  process.env.NEXT_PUBLIC_RESERVATION_TTL_SECONDS || "180",
-  10
-);
+import { useReservation } from "@/hooks/use-reservation";
+import { URGENT_RESERVATION_THRESHOLD_SECONDS } from "@/lib/constants";
 
 export function ReservationTimer() {
   const router = useRouter();
   const pathname = usePathname();
-  const [remainingSeconds, setRemainingSeconds] = useState<number | null>(null);
-  const [ticketIds, setTicketIds] = useState<string[]>([]);
+  const { reservation, remainingSeconds, ticketIds } = useReservation();
   
   const isOnCheckoutPage = pathname?.startsWith("/checkout");
-
-  useEffect(() => {
-    // Check localStorage for active reservation
-    const checkReservation = () => {
-      const reservationStr = localStorage.getItem("tix_reservation");
-      if (!reservationStr) {
-        setRemainingSeconds(null);
-        setTicketIds([]);
-        return;
-      }
-
-      try {
-        const reservation: ReservationData = JSON.parse(reservationStr);
-        const now = Date.now();
-        const elapsed = Math.floor((now - reservation.reservedAt) / 1000);
-        const remaining = RESERVATION_TTL_SECONDS - elapsed;
-
-        if (remaining <= 0) {
-          // Reservation expired
-          localStorage.removeItem("tix_reservation");
-          setRemainingSeconds(null);
-          setTicketIds([]);
-          return;
-        }
-
-        setRemainingSeconds(remaining);
-        setTicketIds(reservation.ticketIds || []);
-      } catch (err) {
-        console.error("Error parsing reservation data:", err);
-        localStorage.removeItem("tix_reservation");
-        setRemainingSeconds(null);
-        setTicketIds([]);
-      }
-    };
-
-    checkReservation();
-
-    // Update every second 
-    // - ideally we would have webhook to the server that would hit us with the reservation time
-    const interval = setInterval(() => {
-      checkReservation();
-    }, 1000);
-
-    return () => clearInterval(interval);
-  }, []);
 
   const handleGoToCheckout = () => {
     if (ticketIds.length > 0 && !isOnCheckoutPage) {
@@ -71,7 +20,7 @@ export function ReservationTimer() {
   };
 
   // Don't render if no active reservation
-  if (remainingSeconds === null || ticketIds.length === 0) {
+  if (!reservation || remainingSeconds <= 0 || ticketIds.length === 0) {
     return null;
   }
 
@@ -80,8 +29,7 @@ export function ReservationTimer() {
   const seconds = remainingSeconds % 60;
   const timeString = `${minutes}:${seconds.toString().padStart(2, "0")}`;
 
-  
-  const isUrgent = remainingSeconds < 30;
+  const isUrgent = remainingSeconds < URGENT_RESERVATION_THRESHOLD_SECONDS;
 
   return (
     <div className="fixed bottom-6 left-6 z-50 animate-in fade-in slide-in-from-bottom-4 duration-300">
