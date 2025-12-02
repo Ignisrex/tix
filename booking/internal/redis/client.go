@@ -27,7 +27,11 @@ for i = 1, #KEYS do
   end
 end
 for i = 1, #KEYS do
-  redis.call("SET", KEYS[i], "true", "EX", ARGV[1], "NX")
+  local result = redis.call("SET", KEYS[i], "true", "EX", ARGV[1], "NX")
+  if result == false then
+    -- SET NX failed (key was created by another process between EXISTS check and SET)
+    return 0
+  end
 end
 return 1
 `)
