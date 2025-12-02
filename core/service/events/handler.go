@@ -162,6 +162,7 @@ func (h *Handler) GetTicket(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) enrichTicketsWithLocks(ctx context.Context, tickets []types.Ticket) ([]types.Ticket, error) {
 	if h.bookingClient == nil {
 		// If booking client is not available, return tickets without lock status
+		log.Printf("Warning: booking client is not available, returning tickets without lock status")
 		return tickets, nil
 	}
 
@@ -235,15 +236,14 @@ func (h *Handler) StreamTickets(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) sendTicketUpdate(w http.ResponseWriter, ctx context.Context, eventID uuid.UUID) error {
-	// Fetch tickets from database
+	// Fetch tickets from database - could overwhelm the database, if we have read replicas this would mitigate the issue
 	tickets, err := h.ticketService.GetTicketsForEvent(ctx, eventID)
 	if err != nil {
 		return fmt.Errorf("failed to get tickets: %w", err)
 	}
 
 	enrichedTickets, _ := h.enrichTicketsWithLocks(ctx, tickets)
-
-	// Marshal to JSON
+	
 	jsonData, err := json.Marshal(enrichedTickets)
 	if err != nil {
 		return fmt.Errorf("failed to marshal tickets: %w", err)

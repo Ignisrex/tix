@@ -16,6 +16,8 @@ const RESERVATION_TTL_SECONDS = parseInt(
   process.env.NEXT_PUBLIC_RESERVATION_TTL_SECONDS || "180",
   10
 );
+// Be pessimistic on the client: assume reservations expire 3 seconds earlier
+const PESSIMISTIC_TTL_SECONDS = Math.max(RESERVATION_TTL_SECONDS - 3, 0);
 
 export default function CheckoutPage() {
   const router = useRouter();
@@ -47,7 +49,7 @@ export default function CheckoutPage() {
 
         const now = Date.now();
         const elapsed = Math.floor((now - reservation.reservedAt) / 1000);
-        const remaining = RESERVATION_TTL_SECONDS - elapsed;
+        const remaining = PESSIMISTIC_TTL_SECONDS - elapsed;
 
         if (remaining <= 0) {
           localStorage.removeItem("tix_reservation");

@@ -373,10 +373,17 @@ DB_NAME=tix_db
    - Imported by all services
    - Reduces code duplication
 
-8. **Reservation Webhooks**
-   - Server-side reservation time tracking
-   - Push notifications to clients
-   - More accurate timer synchronization
+## Known issues and edges:
+1. **Reservation timer only reflects the most recent reservation time**
+   - When a user reserves some tickets, waits, and then reserves additional tickets, the UI currently shows a single countdown based on the **latest** reservation.
+   - Earlier tickets still expire at their original TTL; they are **not** extended, but the single timer can give the impression that all tickets share the new, later expiry.
+   - This can be confusing to the user.
+
+2. **Planned improvements for reservation UX**
+   - **Group tickets by TTL**: have the booking service return per-ticket expiration times (for example `expires_at` / `ttl_seconds` per ticket), then group tickets in the UI by shared expiry and display them as a list, e.g.:
+     - “2 tickets reserved until 10:05:12”
+     - “1 ticket reserved until 10:03:47”
+   - **Make the reservation timer dismissible**: similar to the cart drawer, allow users to hide the reservation timer/banner once they understand the timing, while still enforcing expiry server-side.
 
 ## Tradeoffs & Design Decisions
 
@@ -428,7 +435,6 @@ This approach is especially important for high-demand events where ticket availa
 
 - Event is created in PostgreSQL immediately
 - Elasticsearch indexing happens asynchronously
-- If indexing fails, event is still available via direct database queries
 - Trade-off: Search may not immediately reflect new events, but system remains available
 
 ### Reservation TTL
@@ -438,13 +444,13 @@ This approach is especially important for high-demand events where ticket availa
 - Balances user checkout time with ticket availability
 - Prevents long-held reservations from blocking sales
 - Client-side timer provides user feedback
-- Future: Server-side validation and webhook notifications for accuracy
+- Future: Server-side validation and webhook notifications for accuracy (partially implemented)
 
 ## Project Structure
 
 ```
 tix/
-├── core/              # API Gateway service
+├── core/              # API Gateway & CRUD service
 │   ├── cmd/          # Application entry points
 │   ├── internal/     # Internal packages
 │   ├── service/      # Business logic
