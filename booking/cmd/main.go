@@ -3,7 +3,7 @@ package main
 import (
 	"database/sql"
 	"log"
-	"time"
+	
 
 	"github.com/ignisrex/tix/booking/cmd/api"
 	"github.com/ignisrex/tix/booking/internal/config"
@@ -20,17 +20,6 @@ func main() {
 		log.Fatal("failed to create database handle: ", err)
 	}
 	defer db.Close()
-
-	const maxAttempts = 30
-	for attempt := 1; attempt <= maxAttempts; attempt++ {
-		if err := db.Ping(); err != nil {
-			log.Printf("database not ready (attempt %d/%d): %v", attempt, maxAttempts, err)
-			time.Sleep(2 * time.Second)
-			continue
-		}
-		log.Printf("successfully connected to database after %d attempt(s)", attempt)
-		break
-	}
 
 	redisAddr := config.Envs.RedisAddr()
 	redisClient, err := redis.NewClient(redisAddr, config.Envs.ReservationTTLSeconds)
